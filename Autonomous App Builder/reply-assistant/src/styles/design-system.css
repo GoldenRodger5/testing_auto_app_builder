@@ -1,0 +1,64 @@
+/* ================================================
+   REPLY ASSISTANT — Design System
+   ================================================
+   All design tokens live here. Every component must
+   reference these tokens — no hardcoded values.
+   ================================================ */
+
+/* ---- Color System ---- */
+/*
+  Deep navy-black dark theme with warm amber accent.
+  Three text levels: primary, secondary, muted.
+  Surface: primary (deepest), secondary, card, hover.
+  Semantic: success, warning, error.
+*/
+
+/* ---- Typography System ---- */
+/*
+  Heading font: Outfit (geometric, modern, premium)
+  Body font: DM Sans (clean, readable, warm)
+
+  Scale: xs(11), sm(13), base(15), lg(18), xl(22), 2xl(28), 3xl(36), 4xl(48)
+  Line heights: tight(1.2), snug(1.35), normal(1.5), relaxed(1.65)
+  Letter spacing: tight(-0.02em), normal(0), wide(0.04em), wider(0.08em)
+*/
+
+/* ---- Spacing Conventions ---- */
+/*
+  Card padding: p-4 (mobile), p-5 (desktop)
+  Section gap: space-y-6
+  Page padding: p-5 (mobile), p-8 (desktop)
+  Input padding: px-4 py-3
+  Button padding: defined per size variant
+  Inline gaps: gap-2 (tight), gap-3 (normal), gap-4 (wide)
+*/
+
+/* ---- Shadow System ---- */
+/*
+  subtle:  for cards at rest
+  medium:  for elevated cards / modals
+  strong:  for dropdowns / popovers
+  glow:    accent-colored glow for primary CTAs
+*/
+
+/* ---- Border System ---- */
+/*
+  radius-sm: 0.5rem (8px) — small elements, badges
+  radius-md: 0.75rem (12px) — inputs, buttons
+  radius-lg: 1rem (16px) — cards, modals
+  radius-xl: 1.25rem (20px) — large cards
+  radius-full: 9999px — pills, avatars
+
+  border-color: single consistent color
+  border-width: 1px standard
+*/
+
+/* ---- Animation System ---- */
+/*
+  fast:   150ms — micro interactions (hover, focus)
+  normal: 200ms — transitions (page, card entrance)
+  slow:   300ms — complex animations (modal, skeleton)
+
+  Easing: ease-out for entrances, ease-in for exits
+  Max animation: 300ms — performance over flash
+*/
