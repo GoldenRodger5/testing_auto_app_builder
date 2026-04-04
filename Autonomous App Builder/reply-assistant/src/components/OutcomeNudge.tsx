@@ -34,7 +34,7 @@ export function OutcomeModal({ conversationId, onSave }: OutcomeNudgeProps) {
   if (!open) return null
 
   return (
-    <Modal title="How did it go?" onClose={() => setOpen(false)}>
+    <Modal isOpen={open} title="How did it go?" onClose={() => setOpen(false)}>
       <div className="space-y-4">
         <p className="text-sm text-text-secondary">
           Quick note on how the conversation went — this helps improve future suggestions.
