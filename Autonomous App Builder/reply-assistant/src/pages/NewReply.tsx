@@ -37,6 +37,7 @@ export default function NewReply() {
   const [newContactNotes, setNewContactNotes] = useState('')
 
   // Step 3 — Goal
+  const [selectedChip, setSelectedChip] = useState<string | null>(null)
   const [userGoal, setUserGoal] = useState('')
 
   // Step 4 — Context
@@ -83,7 +84,7 @@ export default function NewReply() {
       case 2:
         return selectedContact !== null
       case 3:
-        return userGoal.trim().length > 0 && userGoal.length <= 500
+        return (selectedChip !== null || userGoal.trim().length > 0) && userGoal.length <= 500
       case 4:
         return true
       default:
@@ -113,11 +114,12 @@ export default function NewReply() {
     setError(null)
 
     try {
+      const fullGoal = [selectedChip, userGoal.trim()].filter(Boolean).join(' — ')
       const history: ConversationSummary[] = await getContactHistory(selectedContact.id)
       const { data: convo, error: convoErr } = await createConversation({
         contact_id: selectedContact.id,
         their_message: theirMessage,
-        user_goal: userGoal,
+        user_goal: fullGoal,
         context_notes: contextNotes || undefined,
       })
 
@@ -132,7 +134,7 @@ export default function NewReply() {
         conversationHistory: history,
         preferredTone: selectedContact.preferred_reply_tone,
         theirMessage,
-        userGoal,
+        userGoal: fullGoal,
         contextNotes: contextNotes || null,
       })
 
@@ -358,10 +360,16 @@ export default function NewReply() {
             {GOAL_CHIPS.map((chip) => (
               <button
                 key={chip}
-                onClick={() => setUserGoal(chip)}
+                onClick={() => {
+                  if (selectedChip === chip) {
+                    setSelectedChip(null)
+                  } else {
+                    setSelectedChip(chip)
+                  }
+                }}
                 className={cn(
                   'px-3.5 py-2 rounded-full text-xs font-medium border transition-all cursor-pointer btn-press',
-                  userGoal === chip
+                  selectedChip === chip
                     ? 'bg-accent text-white border-accent shadow-glow'
                     : 'bg-bg-card border-border text-text-secondary hover:border-border-focus hover:bg-bg-hover'
                 )}
@@ -373,7 +381,7 @@ export default function NewReply() {
           <Textarea
             value={userGoal}
             onChange={(e) => setUserGoal(e.target.value)}
-            placeholder="Describe what you want to achieve..."
+            placeholder={selectedChip ? "Add more detail (optional)..." : "Describe what you want to achieve..."}
             charCount={{ current: userGoal.length, max: 500 }}
             autoResize
           />
