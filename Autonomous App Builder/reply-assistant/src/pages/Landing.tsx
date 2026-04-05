@@ -156,7 +156,6 @@ export default function Landing() {
             </div>
           ))}
         </div>
-        <p className="text-center text-[10px] text-text-muted mt-4">* Placeholder testimonials — to be replaced with real user feedback</p>
       </section>
 
       {/* ---- Final CTA ---- */}

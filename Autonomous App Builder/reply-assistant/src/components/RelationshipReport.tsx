@@ -47,10 +47,19 @@ Preferred tone: ${contact.preferred_reply_tone || 'Not established'}
 Conversation history:
 ${historyText}`
 
+  // Validate session before calling edge function
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) {
+    throw new ClaudeAPIError('You must be signed in to generate a report.', 401)
+  }
+
   // Try edge function first, fall back to Vite proxy
   let data: any
   const { data: edgeData, error: edgeError } = await supabase.functions.invoke('generate-replies', {
     body: { system, user },
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
   })
 
   if (edgeError) {

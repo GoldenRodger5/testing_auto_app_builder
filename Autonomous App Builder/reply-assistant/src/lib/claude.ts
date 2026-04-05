@@ -73,12 +73,27 @@ function parseResponse(text: string): GeneratedReply[] {
  * to /api/generate Vite proxy (local dev).
  */
 async function callGenerateAPI(system: string, user: string): Promise<any> {
+  // Validate session before calling edge function
+  const { data: { session } } = await supabase.auth.getSession()
+
+  if (!session) {
+    throw new ClaudeAPIError('You must be signed in to generate replies. Please log in and try again.', 401)
+  }
+
   // Try Supabase Edge Function first
   const { data, error } = await supabase.functions.invoke('generate-replies', {
     body: { system, user },
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
   })
 
   if (error) {
+    // Auth failure — session may have expired
+    if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
+      throw new ClaudeAPIError('Authentication failed. Please sign out and sign back in.', 401)
+    }
+
     // If edge function is not deployed (e.g., local dev), fall back to Vite proxy
     if (error.message?.includes('FunctionsFetchError') || error.message?.includes('Failed to fetch') || error.message?.includes('not found')) {
       const response = await fetch('/api/generate', {

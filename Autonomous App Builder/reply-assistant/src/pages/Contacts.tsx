@@ -2,14 +2,35 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, UserPlus, Users } from 'lucide-react'
 import { useContacts } from '@/hooks/useContacts'
-import { Button, Card, Badge, EmptyState, ContactCardSkeleton } from '@/components/ui'
-import { getInitialColor } from '@/lib/utils'
+import { Button, Card, Badge, EmptyState, ContactCardSkeleton, Input, Textarea, Modal } from '@/components/ui'
+import { getInitialColor, cn } from '@/lib/utils'
+import { RELATIONSHIP_TYPES } from '@/types'
 
 export default function Contacts() {
-  const { contacts, loading } = useContacts()
+  const { contacts, loading, createContact, fetchContacts } = useContacts()
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState<'recent' | 'alpha'>('recent')
+  const [showAddContact, setShowAddContact] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newType, setNewType] = useState('Friend')
+  const [newNotes, setNewNotes] = useState('')
   const navigate = useNavigate()
+
+  const handleAddContact = async () => {
+    if (!newName.trim()) return
+    const { data } = await createContact({
+      name: newName.trim(),
+      relationship_type: newType,
+      relationship_notes: newNotes.trim() || undefined,
+    })
+    if (data) {
+      setShowAddContact(false)
+      setNewName('')
+      setNewType('Friend')
+      setNewNotes('')
+      await fetchContacts()
+    }
+  }
 
   const filtered = contacts.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase())
@@ -24,7 +45,7 @@ export default function Contacts() {
     <div className="p-5 lg:p-8 space-y-6 page-enter">
       <div className="flex items-center justify-between">
         <h1 className="font-display text-xl font-bold">Contacts</h1>
-        <Button size="sm" onClick={() => navigate('/reply/new')} className="btn-press">
+        <Button size="sm" onClick={() => setShowAddContact(true)} className="btn-press">
           <UserPlus className="w-4 h-4 mr-1.5" /> Add
         </Button>
       </div>
@@ -110,6 +131,52 @@ export default function Contacts() {
           ))}
         </div>
       )}
+
+      <Modal isOpen={showAddContact} onClose={() => setShowAddContact(false)} title="New Contact">
+        <div className="space-y-4">
+          <Input
+            label="Name"
+            placeholder="Their name"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            autoFocus
+          />
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-text-secondary">Relationship</label>
+            <div className="flex flex-wrap gap-1.5">
+              {RELATIONSHIP_TYPES.map((type) => (
+                <button
+                  key={type}
+                  onClick={() => setNewType(type)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors cursor-pointer',
+                    type === newType
+                      ? 'bg-accent text-white border-accent'
+                      : 'bg-bg-card border-border text-text-secondary hover:border-border-focus'
+                  )}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
+          <Textarea
+            label="Notes (optional)"
+            placeholder="Tell me about this person..."
+            value={newNotes}
+            onChange={(e) => setNewNotes(e.target.value)}
+            autoResize
+          />
+          <div className="flex gap-2">
+            <Button onClick={handleAddContact} disabled={!newName.trim()} className="flex-1 btn-press">
+              Create Contact
+            </Button>
+            <Button variant="ghost" onClick={() => setShowAddContact(false)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }
