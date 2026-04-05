@@ -15,7 +15,15 @@ export default function Dashboard() {
   const [outcomeConvoId, setOutcomeConvoId] = useState<string | null>(null)
   const [showPaywall, setShowPaywall] = useState(false)
 
-  const recent = conversations.slice(0, 10)
+  // Deduplicate: keep only the most recent conversation per contact+message pair
+  const deduped = conversations.reduce<typeof conversations>((acc, convo) => {
+    const key = `${convo.contact_id}::${convo.their_message}`
+    if (!acc.some(c => `${c.contact_id}::${c.their_message}` === key)) {
+      acc.push(convo)
+    }
+    return acc
+  }, [])
+  const recent = deduped.slice(0, 10)
 
   const isFollowUpEligible = (convo: typeof conversations[0]) => {
     if (convo.outcome_notes || !convo.selected_reply) return false
@@ -63,7 +71,7 @@ export default function Dashboard() {
       <div className="space-y-1">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="font-display text-2xl font-bold">
+            <h1 className="font-display text-2xl italic">
               {getGreeting()}, {profile?.display_name || 'there'}
             </h1>
             <p className="text-sm text-text-secondary">What do you need to reply to?</p>
@@ -96,7 +104,7 @@ export default function Dashboard() {
       <div className="space-y-3">
         {/* Only show header when conversations exist */}
         {recent.length > 0 && (
-          <h2 className="font-display text-xs font-semibold text-text-muted uppercase tracking-wider">
+          <h2 className="font-display text-sm italic text-text-muted">
             Recent Conversations
           </h2>
         )}
@@ -136,22 +144,22 @@ export default function Dashboard() {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      {/* Name + badge row */}
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="font-medium text-sm truncate">{convo.contact?.name || 'Unknown'}</span>
-                        {convo.contact?.relationship_type && (
-                          <Badge variant="default">{convo.contact.relationship_type}</Badge>
-                        )}
+                      {/* Name + timestamp row */}
+                      <div className="flex items-center justify-between mb-0.5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-medium text-sm truncate">{convo.contact?.name || 'Unknown'}</span>
+                          {convo.contact?.relationship_type && (
+                            <Badge variant="default">{convo.contact.relationship_type}</Badge>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-text-muted shrink-0 ml-2">{timeAgo(convo.created_at)}</span>
                       </div>
 
                       {/* Message preview */}
                       <p className="text-xs text-text-secondary line-clamp-2 leading-relaxed">{truncate(convo.their_message, 100)}</p>
 
-                      {/* Meta row */}
-                      <div className="flex items-center gap-3 mt-2">
-                        <span className="flex items-center gap-1 text-xs text-text-muted">
-                          <Clock className="w-3 h-3" /> {timeAgo(convo.created_at)}
-                        </span>
+                      {/* Status row */}
+                      <div className="flex items-center gap-2 mt-2">
                         {getStatusBadge(convo)}
                         {isFollowUpEligible(convo) && (
                           <button
@@ -164,7 +172,7 @@ export default function Dashboard() {
                       </div>
                     </div>
 
-                    <ArrowRight className="w-4 h-4 text-text-muted shrink-0 mt-3" />
+                    <ArrowRight className="w-4 h-4 text-text-muted shrink-0 mt-3 group-hover:translate-x-0.5 transition-transform" />
                   </div>
                 </Card>
               </div>

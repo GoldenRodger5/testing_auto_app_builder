@@ -29,7 +29,10 @@ export function AppShell() {
           <div className="w-8 h-8 rounded-lg bg-accent-soft flex items-center justify-center">
             <MessageSquareText className="w-4 h-4 text-accent" />
           </div>
-          <span className="font-display font-bold text-base">Reply</span>
+          <div className="leading-none">
+            <span className="font-display text-lg italic text-text-primary block">Reply</span>
+            <span className="text-[9px] font-semibold tracking-[0.2em] uppercase text-text-muted block">Assistant</span>
+          </div>
         </div>
 
         {/* Nav Items */}
@@ -64,7 +67,7 @@ export function AppShell() {
             </div>
             <div className="min-w-0">
               <p className="text-sm font-medium truncate">{profile?.display_name || 'User'}</p>
-              <p className="text-xs text-text-muted truncate">Free plan</p>
+              <p className="text-xs text-text-muted truncate capitalize">{profile?.subscription_tier || 'Free'} plan</p>
             </div>
           </div>
         </div>

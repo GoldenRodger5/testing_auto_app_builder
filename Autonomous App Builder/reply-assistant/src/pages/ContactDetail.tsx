@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, PenLine, Calendar, CheckCircle2, Zap, MessageCircle, ImagePlus, X, AlertCircle, Sparkles } from 'lucide-react'
+import { ArrowLeft, PenLine, Calendar, CheckCircle2, Zap, MessageCircle, ImagePlus, X, AlertCircle, Sparkles, Lock } from 'lucide-react'
 import { useContacts } from '@/hooks/useContacts'
 import { useConversations } from '@/hooks/useConversations'
+import { useAuth } from '@/hooks/useAuth'
 import { Button, Card, Badge, Spinner, Textarea, ErrorState } from '@/components/ui'
 import { OutcomeNudgeBadge, OutcomeModal } from '@/components/OutcomeNudge'
 import { RelationshipReport } from '@/components/RelationshipReport'
@@ -17,6 +18,8 @@ export default function ContactDetail() {
   const navigate = useNavigate()
   const { getContact, updateContact } = useContacts()
   const { getContactConversations, addOutcomeNotes } = useConversations()
+  const { profile } = useAuth()
+  const isPremium = profile?.subscription_tier !== 'free' && profile?.subscription_tier != null
 
   const handleSaveOutcome = async (conversationId: string, notes: string) => {
     await addOutcomeNotes(conversationId, notes)
@@ -200,8 +203,9 @@ export default function ContactDetail() {
             </div>
           </div>
         ) : (
-          <button onClick={() => setEditingNotes(true)} className="text-left w-full cursor-pointer">
-            <p className="text-sm text-text-secondary">{contact.relationship_notes || 'Tap to add notes about this person...'}</p>
+          <button onClick={() => setEditingNotes(true)} className="text-left w-full cursor-pointer group flex items-start gap-2">
+            <p className="text-sm text-text-secondary flex-1">{contact.relationship_notes || 'Tap to add notes about this person...'}</p>
+            <PenLine className="w-3.5 h-3.5 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5" />
           </button>
         )}
       </Card>
@@ -320,7 +324,17 @@ export default function ContactDetail() {
       )}
 
       {/* Relationship Report */}
-      <RelationshipReport contact={contact} conversations={convos} />
+      {isPremium ? (
+        <RelationshipReport contact={contact} conversations={convos} />
+      ) : (
+        <Card className="space-y-3 opacity-75">
+          <div className="flex items-center gap-2">
+            <Lock className="w-4 h-4 text-text-muted" />
+            <p className="text-xs text-text-muted font-medium uppercase tracking-wider">Relationship Report</p>
+          </div>
+          <p className="text-sm text-text-muted">Upgrade to unlock AI-generated relationship insights for {contact.name}.</p>
+        </Card>
+      )}
 
       {/* Outcome modal */}
       {outcomeConvoId && (
@@ -340,13 +354,13 @@ export default function ContactDetail() {
               <Card
                 hoverable
                 onClick={() => navigate(`/reply/${convo.id}`)}
-                className="space-y-2"
+                className="space-y-3"
               >
+                {/* Header: timestamp + status */}
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-3.5 h-3.5 text-text-muted" />
-                    <span className="text-xs text-text-muted">{timeAgo(convo.created_at)}</span>
-                  </div>
+                  <span className="flex items-center gap-1.5 text-xs text-text-muted">
+                    <Calendar className="w-3 h-3" /> {timeAgo(convo.created_at)}
+                  </span>
                   {convo.outcome_notes ? (
                     <Badge variant="success"><CheckCircle2 className="w-3 h-3 mr-1 inline" />Resolved</Badge>
                   ) : convo.selected_reply ? (
@@ -355,16 +369,34 @@ export default function ContactDetail() {
                     <Badge variant="default">Pending</Badge>
                   )}
                 </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-text-muted">They said:</p>
-                  <p className="text-sm text-text-secondary leading-relaxed">{truncate(convo.their_message, 120)}</p>
+
+                {/* Their message */}
+                <div className="flex gap-2.5">
+                  <div
+                    className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+                    style={{ backgroundColor: getInitialColor(contact.name) }}
+                  >
+                    <span className="text-[10px] font-semibold text-white/90">{contact.name.charAt(0).toUpperCase()}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] text-text-muted mb-0.5">They said</p>
+                    <p className="text-sm text-text-secondary leading-relaxed">{truncate(convo.their_message, 120)}</p>
+                  </div>
                 </div>
+
+                {/* Your reply */}
                 {convo.selected_reply && (
-                  <div className="space-y-1 pl-3 border-l-2 border-accent/20">
-                    <p className="text-xs text-text-muted">You replied:</p>
-                    <p className="text-sm text-text-primary leading-relaxed">{truncate(convo.selected_reply, 120)}</p>
+                  <div className="flex gap-2.5 pl-4 border-l-2 border-accent/20">
+                    <div className="w-7 h-7 rounded-full bg-accent-soft flex items-center justify-center shrink-0 mt-0.5">
+                      <span className="text-[10px] font-semibold text-accent">You</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] text-text-muted mb-0.5">You replied</p>
+                      <p className="text-sm text-text-primary leading-relaxed">{truncate(convo.selected_reply, 120)}</p>
+                    </div>
                   </div>
                 )}
+
                 {convo.selected_reply && (
                   <button
                     onClick={(e) => { e.stopPropagation(); navigate(`/reply/continue/${convo.id}`) }}

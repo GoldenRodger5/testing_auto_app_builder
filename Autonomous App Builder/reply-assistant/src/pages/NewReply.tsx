@@ -220,7 +220,7 @@ export default function NewReply() {
           <ArrowLeft className="w-5 h-5 text-text-secondary" />
         </button>
         <div className="flex-1">
-          <h1 className="font-display text-lg font-bold">New Reply</h1>
+          <h1 className="font-display text-xl italic">New Reply</h1>
         </div>
 
         {/* Audience mode pill */}
@@ -264,17 +264,32 @@ export default function NewReply() {
         </div>
       </div>
 
-      {/* Progress bar */}
+      {/* Step indicator */}
       {step < 5 && (
-        <div className="flex items-center gap-2 justify-center">
+        <div className="flex items-center justify-center gap-0">
           {Array.from({ length: totalSteps }).map((_, i) => (
-            <div
-              key={i}
-              className={cn(
-                'h-1 rounded-full transition-all duration-300',
-                i + 1 === activeStep ? 'w-10 bg-accent' : i + 1 < activeStep ? 'w-3 bg-accent/50' : 'w-3 bg-border'
+            <div key={i} className="flex items-center">
+              {/* Step dot */}
+              <div
+                className={cn(
+                  'w-2.5 h-2.5 rounded-full transition-all duration-300',
+                  i + 1 === activeStep
+                    ? 'bg-accent glow-pulse'
+                    : i + 1 < activeStep
+                      ? 'bg-accent'
+                      : 'bg-border'
+                )}
+              />
+              {/* Connector line */}
+              {i < totalSteps - 1 && (
+                <div
+                  className={cn(
+                    'w-8 h-0.5 transition-all duration-300',
+                    i + 1 < activeStep ? 'bg-accent/50' : 'bg-border'
+                  )}
+                />
               )}
-            />
+            </div>
           ))}
         </div>
       )}
@@ -521,7 +536,7 @@ export default function NewReply() {
           <Button
             size="lg"
             className="w-full btn-press"
-            disabled={!canAdvance()}
+            disabled={!canAdvance() || generating}
             onClick={nextStep}
           >
             {step === 3 || step === 4 ? (

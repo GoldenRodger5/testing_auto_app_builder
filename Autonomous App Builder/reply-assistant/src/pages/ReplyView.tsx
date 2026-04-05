@@ -249,7 +249,7 @@ export default function ReplyView() {
           <ArrowLeft className="w-5 h-5 text-text-secondary" />
         </button>
         <div className="flex-1">
-          <h1 className="font-display text-lg font-bold">Reply Options</h1>
+          <h1 className="font-display text-xl italic">Reply Options</h1>
           {conversation.contact && (
             <p className="text-xs text-text-muted">for {conversation.contact.name}</p>
           )}
@@ -274,10 +274,10 @@ export default function ReplyView() {
               className="draft-enter"
               style={{ animationDelay: `${i * 200}ms` }}
             >
-              <Card className="space-y-3">
+              <Card className="space-y-3 border-l-2 border-l-accent/40">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-display font-semibold text-accent">{draft.tone_label}</h3>
+                    <h3 className="font-display text-lg italic text-accent">{draft.tone_label}</h3>
                     <p className="text-xs text-text-muted mt-0.5">{draft.tone_description}</p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -318,18 +318,21 @@ export default function ReplyView() {
 
                 {editingDraftId !== draft.id && (
                   <div className="flex gap-2 pt-1">
-                    <Button
-                      variant="secondary"
-                      size="sm"
+                    <button
                       onClick={() => handleCopy(draft)}
-                      className={cn('flex-1 btn-press', copiedId === draft.id && 'flash-success')}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer btn-press',
+                        copiedId === draft.id
+                          ? 'text-success bg-success-soft'
+                          : 'text-text-secondary hover:text-text-primary hover:bg-bg-hover'
+                      )}
                     >
                       {copiedId === draft.id ? (
-                        <><Check className="w-3.5 h-3.5 mr-1.5 text-success" /> Copied!</>
+                        <><Check className="w-3.5 h-3.5" /> Copied</>
                       ) : (
-                        <><Copy className="w-3.5 h-3.5 mr-1.5" /> Copy</>
+                        <><Copy className="w-3.5 h-3.5" /> Copy</>
                       )}
-                    </Button>
+                    </button>
                     <Button
                       size="sm"
                       onClick={() => handleSelectReply(draft)}
