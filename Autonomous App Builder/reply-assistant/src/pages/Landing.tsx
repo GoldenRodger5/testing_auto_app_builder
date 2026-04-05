@@ -110,7 +110,7 @@ export default function Landing() {
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent-soft border border-accent/15 mb-6"
           >
             <Sparkles className="w-3.5 h-3.5 text-accent" />
-            <span className="text-xs font-medium text-accent">Remembers who people are to you</span>
+            <span className="text-xs font-medium text-accent">Replies that sound like you, not AI</span>
           </motion.div>
 
           {/* Headline */}
@@ -118,18 +118,18 @@ export default function Landing() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease }}
-            className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.1] mb-5 max-w-3xl mx-auto"
+            className="font-display text-5xl sm:text-6xl lg:text-7xl font-bold leading-tight tracking-tight mb-5 max-w-3xl mx-auto"
           >
-            The reply you're{' '}
+            Stop leaving people{' '}
+            <br className="hidden sm:block" />
             <motion.span
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.4, delay: 0.3 }}
-              className="text-gradient"
+              className="text-accent"
             >
-              stressing about
+              on read.
             </motion.span>
-            {' '}\u2014 drafted in 30 seconds
           </motion.h1>
 
           {/* Subtext */}
@@ -139,7 +139,7 @@ export default function Landing() {
             transition={{ duration: 0.5, delay: 0.4 }}
             className="text-text-secondary text-base sm:text-lg mb-8 max-w-lg mx-auto leading-relaxed"
           >
-            Screenshot or paste any message. Get 3 replies crafted for your relationship, your goal, and your voice.
+            You meant to reply. You just froze, or got busy, or couldn't find the right words. Now it's been three days and it feels weird to respond at all. Reply Assistant drafts 3 replies in 30 seconds, matched to your voice, the person, and what you actually want to say.
           </motion.p>
 
           {/* CTAs */}
@@ -158,19 +158,90 @@ export default function Landing() {
               See it in action
             </Button>
           </motion.div>
+
+          {/* Hero conversation preview */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.7, ease }}
+            className="mt-12 mx-auto max-w-sm"
+          >
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm p-4 space-y-3">
+              {/* Received message */}
+              <div className="flex gap-2 items-end">
+                <div className="w-7 h-7 rounded-full bg-slate-600 flex-shrink-0 flex items-center justify-center text-xs text-white/70 font-sans">
+                  M
+                </div>
+                <div className="bg-white/10 rounded-2xl rounded-bl-sm px-4 py-2.5 max-w-[80%]">
+                  <p className="text-sm font-sans text-white/80 leading-snug text-left">
+                    hey are you still upset with me? you've been quiet
+                  </p>
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="flex items-center gap-2 py-1">
+                <div className="flex-1 h-px bg-white/[0.08]" />
+                <span className="text-[10px] font-sans text-white/30 uppercase tracking-widest">
+                  3 replies drafted
+                </span>
+                <div className="flex-1 h-px bg-white/[0.08]" />
+              </div>
+
+              {/* Reply options */}
+              <div className="space-y-2">
+                {[
+                  { tone: 'honest', text: "Not upset, just needed some space. Can we talk later?", highlight: true, delay: 1.2 },
+                  { tone: 'warm', text: "No I'm okay, just had a lot going on. Miss talking to you", highlight: false, delay: 1.45 },
+                  { tone: 'light', text: "lol no, just been in my head. what's up?", highlight: false, delay: 1.7 },
+                ].map((reply) => (
+                  <motion.div
+                    key={reply.tone}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.35, delay: reply.delay, ease: 'easeOut' }}
+                    className={`rounded-xl px-3.5 py-2.5 text-left ${
+                      reply.highlight
+                        ? 'bg-amber-500/[0.08] border border-amber-500/20'
+                        : 'bg-white/[0.04] border border-white/[0.08]'
+                    }`}
+                  >
+                    <p className={`text-[10px] font-sans uppercase tracking-widest mb-1 ${
+                      reply.highlight ? 'text-amber-400/70' : 'text-white/30'
+                    }`}>
+                      {reply.tone}
+                    </p>
+                    <p className={`text-sm font-sans leading-snug ${
+                      reply.highlight ? 'text-white/75' : 'text-white/60'
+                    }`}>
+                      {reply.text}
+                    </p>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Bottom label */}
+              <p className="text-center text-[10px] font-sans text-white/25 pt-1">
+                Tap one to copy and send
+              </p>
+            </div>
+          </motion.div>
         </div>
       </section>
 
       {/* ─── Problem ─────────────────────────────────────────────────────── */}
       <section className="border-y border-border-subtle bg-bg-secondary/50">
-        <div className="max-w-3xl mx-auto px-5 lg:px-8 py-14 lg:py-16 text-center">
+        <div className="max-w-3xl mx-auto px-5 lg:px-8 py-12 lg:py-14 text-center">
           <ScrollReveal>
             <p className="text-text-secondary text-lg sm:text-xl leading-relaxed">
-              You've been staring at that message for 20 minutes.
-              You know what you want to say.
-              You just can't get the{' '}
-              <em className="text-text-primary not-italic font-semibold">tone</em> right.
-              Firm without being rude. Warm without being a pushover. Direct without starting a fight.
+              The message sits there. You think about it in the shower.
+              You open the app, stare at the thread, close it again.
+              The longer you wait, the harder it gets.
+              <strong className="text-text-primary font-medium">
+                {' '}Reply Assistant breaks the paralysis.
+              </strong>
+              {' '}Three options, ready in seconds. One of them will
+              sound exactly like what you wanted to say but couldn't.
             </p>
           </ScrollReveal>
         </div>
