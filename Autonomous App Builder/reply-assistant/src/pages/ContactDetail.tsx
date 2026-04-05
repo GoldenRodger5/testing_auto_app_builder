@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, PenLine, Calendar, CheckCircle2, Zap, MessageCircle } from 'lucide-react'
+import { ArrowLeft, PenLine, Calendar, CheckCircle2, Zap, MessageCircle, ImagePlus, X, AlertCircle, Sparkles } from 'lucide-react'
 import { useContacts } from '@/hooks/useContacts'
 import { useConversations } from '@/hooks/useConversations'
 import { Button, Card, Badge, Spinner, Textarea, ErrorState } from '@/components/ui'
@@ -9,6 +9,8 @@ import { RelationshipReport } from '@/components/RelationshipReport'
 import { RELATIONSHIP_TYPES } from '@/types'
 import type { Contact, Conversation } from '@/types'
 import { timeAgo, truncate, getInitialColor } from '@/lib/utils'
+import { analyzeProfile } from '@/lib/claude'
+import { supabase } from '@/lib/supabase'
 
 export default function ContactDetail() {
   const { id } = useParams<{ id: string }>()
@@ -31,6 +33,61 @@ export default function ContactDetail() {
   const [notes, setNotes] = useState('')
   const [editingType, setEditingType] = useState(false)
   const [outcomeConvoId, setOutcomeConvoId] = useState<string | null>(null)
+
+  // Dating profile analysis
+  const [profileAnalyzing, setProfileAnalyzing] = useState(false)
+  const [profileError, setProfileError] = useState<string | null>(null)
+  const [newInterest, setNewInterest] = useState('')
+  const profileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleProfileScreenshot = async (file: File) => {
+    setProfileAnalyzing(true)
+    setProfileError(null)
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+          const result = reader.result as string
+          resolve(result.replace(/^data:[^;]+;base64,/, ''))
+        }
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+
+      const mimeType = file.type === 'image/png' ? 'image/png'
+        : file.type === 'image/webp' ? 'image/webp'
+        : 'image/jpeg'
+
+      const extracted = await analyzeProfile(base64, mimeType)
+      const allInterests = extracted.interests.concat(extracted.bio_signals)
+      const existing = contact?.dating_interests || []
+      const merged = Array.from(new Set([...existing, ...allInterests])).filter(Boolean)
+
+      await supabase.from('contacts').update({ dating_interests: merged }).eq('id', contact!.id)
+      setContact(prev => prev ? { ...prev, dating_interests: merged } : null)
+    } catch {
+      setProfileError("Couldn't extract interests — try a clearer screenshot.")
+    } finally {
+      setProfileAnalyzing(false)
+      if (profileInputRef.current) profileInputRef.current.value = ''
+    }
+  }
+
+  const handleAddInterest = async () => {
+    const trimmed = newInterest.trim()
+    if (!trimmed || !contact) return
+    const updated = [...(contact.dating_interests || []), trimmed]
+    await supabase.from('contacts').update({ dating_interests: updated }).eq('id', contact.id)
+    setContact(prev => prev ? { ...prev, dating_interests: updated } : null)
+    setNewInterest('')
+  }
+
+  const handleRemoveInterest = async (interest: string) => {
+    if (!contact) return
+    const updated = (contact.dating_interests || []).filter(i => i !== interest)
+    await supabase.from('contacts').update({ dating_interests: updated }).eq('id', contact.id)
+    setContact(prev => prev ? { ...prev, dating_interests: updated } : null)
+  }
 
   useEffect(() => {
     async function load() {
@@ -160,6 +217,98 @@ export default function ContactDetail() {
           </Button>
         )}
       </div>
+
+      {/* Dating Profile Section — only for dating contacts */}
+      {contact.contact_audience === 'dating' && (
+        <Card className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-text-muted font-medium uppercase tracking-wider">Their Profile</p>
+            {contact.dating_platform && (
+              <Badge variant="accent" className="capitalize">{contact.dating_platform}</Badge>
+            )}
+          </div>
+
+          {/* Upload screenshot zone */}
+          <div
+            onClick={() => !profileAnalyzing && profileInputRef.current?.click()}
+            className="rounded-xl border-2 border-dashed border-border p-5 text-center cursor-pointer transition-all hover:border-accent/50 hover:bg-bg-hover select-none"
+          >
+            <input
+              ref={profileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+              className="hidden"
+              onChange={e => {
+                const f = e.target.files?.[0]
+                if (f) handleProfileScreenshot(f)
+              }}
+            />
+            <div className="flex flex-col items-center gap-2">
+              {profileAnalyzing ? (
+                <>
+                  <div className="w-8 h-8 rounded-full border-2 border-accent border-t-transparent animate-spin" />
+                  <p className="text-sm font-medium text-accent">Analyzing their profile...</p>
+                </>
+              ) : (
+                <>
+                  <div className="w-10 h-10 rounded-xl bg-accent-soft flex items-center justify-center">
+                    <ImagePlus className="w-5 h-5 text-accent" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-text-primary">Upload their dating profile</p>
+                    <p className="text-xs text-text-muted mt-0.5">Drag a screenshot to extract their interests automatically</p>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {profileError && (
+            <div className="flex items-center gap-2 text-xs text-error">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              {profileError}
+            </div>
+          )}
+
+          {/* Interests chips */}
+          {(contact.dating_interests || []).length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs text-text-muted font-medium">Interests</p>
+              <div className="flex flex-wrap gap-2">
+                {(contact.dating_interests || []).map(interest => (
+                  <div
+                    key={interest}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-accent-soft border border-accent/20 text-xs text-accent font-medium"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    {interest}
+                    <button
+                      onClick={() => handleRemoveInterest(interest)}
+                      className="ml-0.5 hover:text-accent-hover transition-colors cursor-pointer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Add custom interest */}
+          <div className="flex gap-2">
+            <input
+              value={newInterest}
+              onChange={e => setNewInterest(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleAddInterest()}
+              placeholder="Add an interest..."
+              className="flex-1 text-sm bg-bg-hover border border-border rounded-lg px-3 py-2 text-text-primary placeholder:text-text-muted focus:outline-none focus:border-border-focus transition-colors"
+            />
+            <Button size="sm" variant="secondary" onClick={handleAddInterest} disabled={!newInterest.trim()}>
+              Add
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {/* Relationship Report */}
       <RelationshipReport contact={contact} conversations={convos} />

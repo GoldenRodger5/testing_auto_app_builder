@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { generateReplies } from '@/lib/claude'
 import { Button, Input, Textarea, Card, Badge, Spinner, ErrorState, ScreenshotUpload } from '@/components/ui'
 import type { ScreenshotSet } from '@/components/ui'
+import { PaywallModal } from '@/components/PaywallModal'
 import { goalChips, audienceConfig } from '@/lib/goalChips'
 import { RELATIONSHIP_TYPES } from '@/types'
 import type { Contact, ConversationSummary, AudienceMode } from '@/types'
@@ -26,9 +27,12 @@ export default function NewReply() {
   const { createConversation, saveDrafts, getContactHistory } = useConversations()
   const { profile } = useAuth()
 
-  // Audience mode
+  // Audience mode — guard against 'all' or null values from profile
+  const validAudiences: AudienceMode[] = ['personal', 'freelancer', 'business', 'dating']
   const defaultAudience: AudienceMode =
-    (profile?.primary_audience as AudienceMode) || 'personal'
+    validAudiences.includes(profile?.primary_audience as AudienceMode)
+      ? (profile?.primary_audience as AudienceMode)
+      : 'personal'
   const [audienceMode, setAudienceMode] = useState<AudienceMode>(defaultAudience)
   const [showAudiencePicker, setShowAudiencePicker] = useState(false)
 
@@ -59,6 +63,8 @@ export default function NewReply() {
   const [generating, setGenerating] = useState(false)
   const [loadingMsg, setLoadingMsg] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [showPaywall, setShowPaywall] = useState(false)
+  const [paywallTrigger, setPaywallTrigger] = useState<'limit' | 'screenshot' | 'goal_chips'>('limit')
 
   const isPremium = profile?.subscription_tier !== 'free' && profile?.subscription_tier != null
 
@@ -161,7 +167,9 @@ export default function NewReply() {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Something went wrong'
       if (message === 'free_limit_reached') {
-        setError('You\'ve used your 5 free replies this month. Upgrade to continue.')
+        setPaywallTrigger('limit')
+        setShowPaywall(true)
+        setStep(1)
       } else {
         setError(message)
       }
@@ -195,6 +203,14 @@ export default function NewReply() {
 
   return (
     <div className="p-5 lg:p-8 space-y-6">
+      {/* Paywall Modal */}
+      <PaywallModal
+        isOpen={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        trigger={paywallTrigger}
+        repliesUsed={profile?.monthly_reply_count ?? 5}
+      />
+
       {/* Header */}
       <div className="flex items-center gap-3">
         <button
@@ -275,7 +291,7 @@ export default function NewReply() {
           <ScreenshotUpload
             onChange={setScreenshots}
             isPremium={isPremium}
-            onPaywall={() => navigate('/settings')}
+            onPaywall={() => { setPaywallTrigger('screenshot'); setShowPaywall(true) }}
           />
 
           {/* Divider */}
