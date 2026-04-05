@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Search, UserPlus, Check, Sparkles } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Search, UserPlus, Check, Sparkles, ChevronRight } from 'lucide-react'
 import { useContacts } from '@/hooks/useContacts'
 import { useConversations } from '@/hooks/useConversations'
+import { useAuth } from '@/hooks/useAuth'
 import { generateReplies } from '@/lib/claude'
-import { Button, Input, Textarea, Card, Badge, Spinner, ErrorState } from '@/components/ui'
-import { RELATIONSHIP_TYPES, GOAL_CHIPS } from '@/types'
-import type { Contact, ConversationSummary } from '@/types'
+import { Button, Input, Textarea, Card, Badge, Spinner, ErrorState, ScreenshotUpload } from '@/components/ui'
+import type { ScreenshotSet } from '@/components/ui'
+import { goalChips, audienceConfig } from '@/lib/goalChips'
+import { RELATIONSHIP_TYPES } from '@/types'
+import type { Contact, ConversationSummary, AudienceMode } from '@/types'
 import { cn, getInitialColor } from '@/lib/utils'
 
 const LOADING_MESSAGES = [
@@ -21,12 +24,20 @@ export default function NewReply() {
   const location = useLocation()
   const { contacts, createContact, fetchContacts } = useContacts()
   const { createConversation, saveDrafts, getContactHistory } = useConversations()
+  const { profile } = useAuth()
+
+  // Audience mode
+  const defaultAudience: AudienceMode =
+    (profile?.primary_audience as AudienceMode) || 'personal'
+  const [audienceMode, setAudienceMode] = useState<AudienceMode>(defaultAudience)
+  const [showAudiencePicker, setShowAudiencePicker] = useState(false)
 
   // Steps: 1=message, 2=contact, 3=goal, 4=context, 5=generating
   const [step, setStep] = useState(1)
 
   // Step 1 — Their Message
   const [theirMessage, setTheirMessage] = useState('')
+  const [screenshots, setScreenshots] = useState<ScreenshotSet>({ main: null, context: [], mimeType: 'image/jpeg' })
 
   // Step 2 — Contact
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
@@ -49,18 +60,18 @@ export default function NewReply() {
   const [loadingMsg, setLoadingMsg] = useState('')
   const [error, setError] = useState<string | null>(null)
 
+  const isPremium = profile?.subscription_tier !== 'free' && profile?.subscription_tier != null
+
   // Pre-fill contact from location state
   useEffect(() => {
-    const stateContactId = (location.state as any)?.contactId
+    const stateContactId = (location.state as { contactId?: string })?.contactId
     if (stateContactId && contacts.length > 0) {
       const found = contacts.find(c => c.id === stateContactId)
-      if (found) {
-        setSelectedContact(found)
-      }
+      if (found) setSelectedContact(found)
     }
   }, [location.state, contacts])
 
-  // Cycle loading messages during generation
+  // Cycle loading messages
   useEffect(() => {
     if (!generating) return
     let i = 0
@@ -77,18 +88,16 @@ export default function NewReply() {
     c.name.toLowerCase().includes(contactSearch.toLowerCase())
   )
 
+  const hasScreenshot = !!screenshots.main
+  const hasMessage = theirMessage.trim().length > 0
+
   const canAdvance = () => {
     switch (step) {
-      case 1:
-        return theirMessage.trim().length > 0 && theirMessage.length <= 5000
-      case 2:
-        return selectedContact !== null
-      case 3:
-        return (selectedChip !== null || userGoal.trim().length > 0) && userGoal.length <= 500
-      case 4:
-        return true
-      default:
-        return false
+      case 1: return (hasScreenshot || hasMessage) && theirMessage.length <= 5000
+      case 2: return selectedContact !== null
+      case 3: return (selectedChip !== null || userGoal.trim().length > 0) && userGoal.length <= 500
+      case 4: return true
+      default: return false
     }
   }
 
@@ -116,16 +125,18 @@ export default function NewReply() {
     try {
       const fullGoal = [selectedChip, userGoal.trim()].filter(Boolean).join(' — ')
       const history: ConversationSummary[] = await getContactHistory(selectedContact.id)
+
       const { data: convo, error: convoErr } = await createConversation({
         contact_id: selectedContact.id,
-        their_message: theirMessage,
+        their_message: theirMessage || (hasScreenshot ? '[Screenshot provided]' : ''),
         user_goal: fullGoal,
         context_notes: contextNotes || undefined,
-      })
+        audience_context: audienceMode,
+      } as Parameters<typeof createConversation>[0])
 
-      if (convoErr || !convo) {
-        throw new Error(convoErr || 'Failed to create conversation')
-      }
+      if (convoErr || !convo) throw new Error(convoErr || 'Failed to create conversation')
+
+      const styleExamples = profile?.style_examples?.filter(Boolean) || []
 
       const replies = await generateReplies({
         contactName: selectedContact.name,
@@ -133,15 +144,27 @@ export default function NewReply() {
         relationshipNotes: selectedContact.relationship_notes,
         conversationHistory: history,
         preferredTone: selectedContact.preferred_reply_tone,
-        theirMessage,
+        theirMessage: theirMessage || null,
         userGoal: fullGoal,
         contextNotes: contextNotes || null,
+        audienceContext: audienceMode,
+        styleExamples,
+        messageScreenshot: screenshots.main || undefined,
+        contextScreenshots: screenshots.context,
+        screenshotMimeType: screenshots.mimeType,
+        datingPlatform: selectedContact.dating_platform,
+        datingInterests: selectedContact.dating_interests || [],
       })
 
       await saveDrafts(convo.id, replies)
       navigate(`/reply/${convo.id}`, { replace: true })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Something went wrong'
+      if (message === 'free_limit_reached') {
+        setError('You\'ve used your 5 free replies this month. Upgrade to continue.')
+      } else {
+        setError(message)
+      }
       setGenerating(false)
     }
   }
@@ -165,6 +188,8 @@ export default function NewReply() {
     else if (step > 1) setStep(step - 1)
   }
 
+  const chips = goalChips[audienceMode] || goalChips.personal
+  const audConf = audienceConfig[audienceMode]
   const totalSteps = 4
   const activeStep = Math.min(step, 4)
 
@@ -181,6 +206,46 @@ export default function NewReply() {
         <div className="flex-1">
           <h1 className="font-display text-lg font-bold">New Reply</h1>
         </div>
+
+        {/* Audience mode pill */}
+        <div className="relative">
+          <button
+            onClick={() => setShowAudiencePicker(!showAudiencePicker)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-bg-card border border-border text-xs font-medium hover:border-border-focus transition-colors cursor-pointer"
+          >
+            <span>{audConf.icon}</span>
+            <span className="text-text-secondary">{audConf.label}</span>
+            <ChevronRight className={cn('w-3 h-3 text-text-muted transition-transform', showAudiencePicker && 'rotate-90')} />
+          </button>
+
+          {showAudiencePicker && (
+            <div className="absolute right-0 top-full mt-1 z-50 w-56 rounded-xl bg-bg-elevated border border-border shadow-lg overflow-hidden">
+              {(Object.entries(audienceConfig) as [AudienceMode, typeof audConf][]).map(([mode, conf]) => (
+                <button
+                  key={mode}
+                  onClick={() => {
+                    setAudienceMode(mode)
+                    setSelectedChip(null)
+                    setShowAudiencePicker(false)
+                  }}
+                  className={cn(
+                    'w-full flex items-center gap-3 px-4 py-3 text-left text-sm transition-colors cursor-pointer',
+                    mode === audienceMode
+                      ? 'bg-accent-soft text-accent'
+                      : 'hover:bg-bg-hover text-text-secondary'
+                  )}
+                >
+                  <span className="text-base">{conf.icon}</span>
+                  <div>
+                    <p className="font-medium leading-tight">{conf.label}</p>
+                    <p className="text-xs text-text-muted leading-tight mt-0.5">{conf.description}</p>
+                  </div>
+                  {mode === audienceMode && <Check className="w-4 h-4 ml-auto shrink-0" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Progress bar */}
@@ -191,11 +256,7 @@ export default function NewReply() {
               key={i}
               className={cn(
                 'h-1 rounded-full transition-all duration-300',
-                i + 1 === activeStep
-                  ? 'w-10 bg-accent'
-                  : i + 1 < activeStep
-                    ? 'w-3 bg-accent/50'
-                    : 'w-3 bg-border'
+                i + 1 === activeStep ? 'w-10 bg-accent' : i + 1 < activeStep ? 'w-3 bg-accent/50' : 'w-3 bg-border'
               )}
             />
           ))}
@@ -207,16 +268,33 @@ export default function NewReply() {
         <div className="space-y-4 page-enter">
           <div>
             <h2 className="font-display font-semibold text-base mb-1">Their message</h2>
-            <p className="text-sm text-text-secondary">Paste the message you received</p>
+            <p className="text-sm text-text-secondary">Upload a screenshot or paste the message</p>
           </div>
+
+          {/* Screenshot upload */}
+          <ScreenshotUpload
+            onChange={setScreenshots}
+            isPremium={isPremium}
+            onPaywall={() => navigate('/settings')}
+          />
+
+          {/* Divider */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-xs text-text-muted font-medium">or type it</span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+
+          {/* Text input */}
           <Textarea
             value={theirMessage}
             onChange={(e) => setTheirMessage(e.target.value)}
-            placeholder="Paste or type the message here..."
+            placeholder={hasScreenshot ? 'Add any extra context from the message (optional)...' : 'Paste or type the message here...'}
             charCount={{ current: theirMessage.length, max: 5000 }}
-            className="min-h-[200px]"
-            autoFocus
+            className="min-h-[120px]"
+            autoFocus={!hasScreenshot}
           />
+
           {selectedContact && (
             <div className="flex items-center gap-2 p-3 rounded-lg bg-accent-soft border border-accent/15">
               <Check className="w-4 h-4 text-accent shrink-0" />
@@ -256,7 +334,6 @@ export default function NewReply() {
                 />
               </div>
 
-              {/* New Contact option */}
               <button
                 onClick={() => setShowNewContact(true)}
                 className="w-full flex items-center gap-3 p-3 rounded-lg border border-dashed border-border hover:border-accent/40 hover:bg-accent-muted transition-colors cursor-pointer"
@@ -267,7 +344,6 @@ export default function NewReply() {
                 <span className="text-sm font-medium text-accent">New Contact</span>
               </button>
 
-              {/* Contact list */}
               <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
                 {filteredContacts.map((contact) => (
                   <button
@@ -290,17 +366,18 @@ export default function NewReply() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <span className="text-sm font-medium block truncate">{contact.name}</span>
-                      <span className="text-xs text-text-muted">{contact.relationship_type}</span>
+                      <span className="text-xs text-text-muted">
+                        {contact.contact_audience === 'dating' && contact.dating_platform
+                          ? `${audienceConfig.dating.icon} ${contact.dating_platform}`
+                          : contact.relationship_type}
+                      </span>
                     </div>
-                    {selectedContact?.id === contact.id && (
-                      <Check className="w-4 h-4 text-accent shrink-0" />
-                    )}
+                    {selectedContact?.id === contact.id && <Check className="w-4 h-4 text-accent shrink-0" />}
                   </button>
                 ))}
               </div>
             </>
           ) : (
-            /* Inline new contact form */
             <Card className="space-y-4">
               <Input
                 label="Name"
@@ -340,9 +417,7 @@ export default function NewReply() {
                 <Button onClick={handleCreateContact} disabled={!newContactName.trim()} className="flex-1 btn-press">
                   Create Contact
                 </Button>
-                <Button variant="ghost" onClick={() => setShowNewContact(false)}>
-                  Cancel
-                </Button>
+                <Button variant="ghost" onClick={() => setShowNewContact(false)}>Cancel</Button>
               </div>
             </Card>
           )}
@@ -357,16 +432,10 @@ export default function NewReply() {
             <p className="text-sm text-text-secondary">What do you want to achieve with your reply?</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {GOAL_CHIPS.map((chip) => (
+            {chips.map((chip) => (
               <button
                 key={chip}
-                onClick={() => {
-                  if (selectedChip === chip) {
-                    setSelectedChip(null)
-                  } else {
-                    setSelectedChip(chip)
-                  }
-                }}
+                onClick={() => setSelectedChip(selectedChip === chip ? null : chip)}
                 className={cn(
                   'px-3.5 py-2 rounded-full text-xs font-medium border transition-all cursor-pointer btn-press',
                   selectedChip === chip
@@ -381,12 +450,11 @@ export default function NewReply() {
           <Textarea
             value={userGoal}
             onChange={(e) => setUserGoal(e.target.value)}
-            placeholder={selectedChip ? "Add more detail (optional)..." : "Describe what you want to achieve..."}
+            placeholder={selectedChip ? 'Add more detail (optional)...' : 'Describe what you want to achieve...'}
             charCount={{ current: userGoal.length, max: 500 }}
             autoResize
           />
 
-          {/* Context toggle */}
           <button
             onClick={() => setShowContext(!showContext)}
             className="flex items-center gap-2 text-sm text-text-muted hover:text-text-secondary transition-colors cursor-pointer"
@@ -441,13 +509,9 @@ export default function NewReply() {
             onClick={nextStep}
           >
             {step === 3 || step === 4 ? (
-              <>
-                <Sparkles className="w-4 h-4 mr-2" /> Generate Replies
-              </>
+              <><Sparkles className="w-4 h-4 mr-2" /> Generate Replies</>
             ) : (
-              <>
-                Continue <ArrowRight className="w-4 h-4 ml-2" />
-              </>
+              <>Continue <ArrowRight className="w-4 h-4 ml-2" /></>
             )}
           </Button>
         </div>

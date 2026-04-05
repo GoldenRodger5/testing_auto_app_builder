@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PenLine, MessageSquare, Clock, ArrowRight, CheckCircle2 } from 'lucide-react'
+import { PenLine, MessageSquare, Clock, ArrowRight, CheckCircle2, Bell } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useConversations } from '@/hooks/useConversations'
 import { Button, Card, Badge, EmptyState, ConversationCardSkeleton } from '@/components/ui'
@@ -14,6 +14,18 @@ export default function Dashboard() {
   const [outcomeConvoId, setOutcomeConvoId] = useState<string | null>(null)
 
   const recent = conversations.slice(0, 10)
+
+  const isFollowUpEligible = (convo: typeof conversations[0]) => {
+    if (convo.outcome_notes || !convo.selected_reply) return false
+    if ((convo.follow_up_count || 0) >= 3) return false
+    const daysSince = (Date.now() - new Date(convo.created_at).getTime()) / (1000 * 60 * 60 * 24)
+    if (daysSince < 5) return false
+    if (convo.last_follow_up_at) {
+      const daysSinceFollowUp = (Date.now() - new Date(convo.last_follow_up_at).getTime()) / (1000 * 60 * 60 * 24)
+      if (daysSinceFollowUp < 3) return false
+    }
+    return true
+  }
 
   const handleSaveOutcome = async (conversationId: string, notes: string) => {
     await addOutcomeNotes(conversationId, notes)
@@ -108,6 +120,14 @@ export default function Dashboard() {
                           <Clock className="w-3 h-3" /> {timeAgo(convo.created_at)}
                         </span>
                         {getStatusBadge(convo)}
+                        {isFollowUpEligible(convo) && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); navigate(`/reply/continue/${convo.id}`) }}
+                            className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-medium hover:bg-amber-500/20 transition-colors cursor-pointer"
+                          >
+                            <Bell className="w-2.5 h-2.5" /> Follow up?
+                          </button>
+                        )}
                       </div>
                     </div>
 

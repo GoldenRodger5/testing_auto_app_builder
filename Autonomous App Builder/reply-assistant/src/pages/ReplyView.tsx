@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Copy, Check, CheckCircle, RefreshCw, Sparkles, Pencil, X } from 'lucide-react'
+import { ArrowLeft, Copy, Check, CheckCircle, RefreshCw, Sparkles, Pencil, X, Zap } from 'lucide-react'
 import { useConversations } from '@/hooks/useConversations'
 import { useContacts } from '@/hooks/useContacts'
 import { generateReplies } from '@/lib/claude'
@@ -34,6 +34,12 @@ export default function ReplyView() {
   const [showGuidance, setShowGuidance] = useState(false)
   const [guidanceText, setGuidanceText] = useState('')
   const [regenCount, setRegenCount] = useState(0)
+
+  // Tone quick-adjust
+  const [adjustCount, setAdjustCount] = useState(0)
+  const [adjusting, setAdjusting] = useState(false)
+  const MAX_ADJUSTMENTS = 3
+  const TONE_CHIPS = ['Shorter', 'Warmer', 'Firmer', 'More formal', 'Less formal', 'More direct']
 
   useEffect(() => {
     async function load() {
@@ -147,6 +153,34 @@ export default function ReplyView() {
       setRegenError(err instanceof Error ? err.message : 'Failed to regenerate')
     }
     setRegenerating(false)
+  }
+
+  const handleToneAdjust = async (modifier: string) => {
+    if (!conversation || !conversation.contact || adjustCount >= MAX_ADJUSTMENTS) return
+    setAdjusting(true)
+    try {
+      const history = await getContactHistory(conversation.contact_id)
+      const contact = conversation.contact
+      const replies = await generateReplies({
+        contactName: contact.name,
+        relationshipType: contact.relationship_type,
+        relationshipNotes: contact.relationship_notes,
+        conversationHistory: history,
+        preferredTone: contact.preferred_reply_tone,
+        theirMessage: conversation.their_message,
+        userGoal: conversation.user_goal,
+        contextNotes: conversation.context_notes
+          ? `${conversation.context_notes}\n\nTONE ADJUSTMENT: Make the replies ${modifier.toLowerCase()}`
+          : `TONE ADJUSTMENT: Make the replies ${modifier.toLowerCase()}`,
+        audienceContext: (conversation.audience_context as any) || 'personal',
+      })
+      const { data: newDrafts } = await saveDrafts(conversation.id, replies)
+      if (newDrafts) setDrafts(newDrafts)
+      setAdjustCount(prev => prev + 1)
+    } catch (err) {
+      setRegenError(err instanceof Error ? err.message : 'Failed to adjust tone')
+    }
+    setAdjusting(false)
   }
 
   if (loading) {
@@ -311,6 +345,37 @@ export default function ReplyView() {
         </div>
       ) : (
         <ErrorState description="No drafts found for this conversation" onRetry={() => window.location.reload()} />
+      )}
+
+      {/* Tone quick-adjust */}
+      {drafts.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs text-text-muted text-center">Adjust tone:</p>
+          <div className="flex flex-wrap gap-2 justify-center">
+            {TONE_CHIPS.map((chip) => (
+              <button
+                key={chip}
+                onClick={() => handleToneAdjust(chip)}
+                disabled={adjusting || adjustCount >= MAX_ADJUSTMENTS}
+                title={adjustCount >= MAX_ADJUSTMENTS ? 'Try editing the reply manually' : undefined}
+                className={cn(
+                  'px-3 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer btn-press',
+                  adjustCount >= MAX_ADJUSTMENTS
+                    ? 'border-border text-text-muted opacity-40 cursor-not-allowed'
+                    : 'border-border text-text-secondary hover:border-accent/50 hover:text-text-primary'
+                )}
+              >
+                {adjusting ? '...' : chip}
+              </button>
+            ))}
+          </div>
+          {adjustCount > 0 && adjustCount < MAX_ADJUSTMENTS && (
+            <p className="text-xs text-text-muted text-center">Adjusted {adjustCount}/{MAX_ADJUSTMENTS} times</p>
+          )}
+          {adjustCount >= MAX_ADJUSTMENTS && (
+            <p className="text-xs text-text-muted text-center">Try editing the reply manually</p>
+          )}
+        </div>
       )}
 
       {/* Regenerate with guidance */}

@@ -39,6 +39,7 @@ export function useConversations() {
     their_message: string
     user_goal: string
     context_notes?: string
+    audience_context?: string
   }) => {
     if (!user) return { data: null, error: 'Not authenticated' }
 
@@ -50,6 +51,7 @@ export function useConversations() {
         their_message: params.their_message,
         user_goal: params.user_goal,
         context_notes: params.context_notes || null,
+        audience_context: params.audience_context || 'personal',
       })
       .select('*, contact:contacts(*)')
       .single()

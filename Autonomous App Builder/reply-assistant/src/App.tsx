@@ -19,6 +19,7 @@ const ContactDetail = lazy(() => import('@/pages/ContactDetail'))
 const Settings = lazy(() => import('@/pages/Settings'))
 const QuickReply = lazy(() => import('@/pages/QuickReply'))
 const ContinueConversation = lazy(() => import('@/pages/ContinueConversation'))
+const Onboarding = lazy(() => import('@/pages/Onboarding'))
 
 function LoadingFallback() {
   return (
@@ -37,6 +38,18 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+
+          {/* Onboarding — protected but outside AppShell */}
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingFallback />}>
+                  <Onboarding />
+                </Suspense>
+              </ProtectedRoute>
+            }
+          />
 
           {/* Protected routes with AppShell */}
           <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>

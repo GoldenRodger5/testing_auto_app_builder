@@ -29,7 +29,7 @@ export default function Signup() {
     if (error) {
       setError(error)
     } else {
-      navigate('/dashboard', { replace: true })
+      navigate('/onboarding', { replace: true })
     }
   }
 

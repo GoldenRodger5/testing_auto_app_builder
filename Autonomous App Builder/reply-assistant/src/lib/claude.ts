@@ -8,112 +8,47 @@ export class ClaudeAPIError extends Error {
   }
 }
 
-function buildPrompt(params: GenerateRepliesParams): { system: string; user: string } {
-  const historyText = params.conversationHistory.length > 0
-    ? params.conversationHistory.map((c, i) =>
-        `${i + 1}. They said: "${c.their_message_preview}" → I replied (${c.tone_used || 'unknown tone'}): "${c.selected_reply_preview || 'no reply selected'}" → Outcome: ${c.outcome || 'not recorded'}`
-      ).join('\n')
-    : 'This is the first conversation with this contact'
-
-  const system = `You are a communication coach helping someone craft the perfect reply to a message they received.
-You know this person well and understand their communication goals.
-
-You always return exactly 3 reply options in valid JSON with this structure:
-{
-  "replies": [
-    {
-      "tone_label": "string — one word or short phrase",
-      "tone_description": "string — one sentence describing the approach",
-      "content": "string — the full reply text, ready to send"
-    }
-  ]
-}
-
-Return only valid JSON. No preamble, no explanation outside the JSON.`
-
-  const user = `ABOUT THE PERSON WHO SENT THIS MESSAGE:
-Name: ${params.contactName}
-Relationship: ${params.relationshipType}
-Context about them: ${params.relationshipNotes || 'No additional context provided'}
-Communication history with them: ${historyText}
-Typical reply tone I use with them: ${params.preferredTone || 'Not yet established'}
-
-THE MESSAGE I RECEIVED:
-${params.theirMessage}
-
-MY GOAL WITH MY REPLY:
-${params.userGoal}
-
-ADDITIONAL CONTEXT:
-${params.contextNotes || 'None'}
-
-Generate 3 distinct reply options. Make them meaningfully different — different strategies, not just different levels of formality. Each should be complete and ready to send as-is. Do not use placeholder text like [your name].`
-
-  return { system, user }
-}
-
 function parseResponse(text: string): GeneratedReply[] {
-  const parsed = JSON.parse(text)
-
+  const cleaned = text.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim()
+  const parsed = JSON.parse(cleaned)
   if (!parsed.replies || !Array.isArray(parsed.replies) || parsed.replies.length !== 3) {
     throw new Error('Response must contain exactly 3 replies')
   }
-
   for (const reply of parsed.replies) {
     if (!reply.tone_label || !reply.tone_description || !reply.content) {
       throw new Error('Each reply must have tone_label, tone_description, and content')
     }
   }
-
   return parsed.replies
 }
 
-/**
- * Calls the generate-replies edge function (production) or falls back
- * to /api/generate Vite proxy (local dev).
- */
-async function callGenerateAPI(system: string, user: string): Promise<any> {
-  // Validate session before calling edge function
+async function callGenerateAPI(body: Record<string, unknown>): Promise<unknown> {
   const { data: { session } } = await supabase.auth.getSession()
-
   if (!session) {
-    throw new ClaudeAPIError('You must be signed in to generate replies. Please log in and try again.', 401)
+    throw new ClaudeAPIError('You must be signed in to generate replies.', 401)
   }
 
-  // Try Supabase Edge Function first
   const { data, error } = await supabase.functions.invoke('generate-replies', {
-    body: { system, user },
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-    },
+    body,
+    headers: { Authorization: `Bearer ${session.access_token}` },
   })
 
   if (error) {
-    // Auth failure — session may have expired
+    const errData = data as { error?: string } | null
+    if (errData?.error === 'free_limit_reached') throw new ClaudeAPIError('free_limit_reached', 402)
     if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
       throw new ClaudeAPIError('Authentication failed. Please sign out and sign back in.', 401)
     }
-
-    // If edge function is not deployed (e.g., local dev), fall back to Vite proxy
     if (error.message?.includes('FunctionsFetchError') || error.message?.includes('Failed to fetch') || error.message?.includes('not found')) {
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ system, user }),
+        body: JSON.stringify(body),
       })
-
-      if (response.status === 429) {
-        throw new ClaudeAPIError('Claude is busy right now — wait a moment and try again', 429)
-      }
-
-      if (!response.ok) {
-        const errBody = await response.text().catch(() => 'Unknown error')
-        throw new ClaudeAPIError(`Failed to generate replies: ${errBody}`, response.status)
-      }
-
-      return await response.json()
+      if (response.status === 429) throw new ClaudeAPIError('Claude is busy — wait a moment and try again', 429)
+      if (!response.ok) throw new ClaudeAPIError(`Failed to generate: ${await response.text().catch(() => '')}`, response.status)
+      return response.json()
     }
-
     throw new ClaudeAPIError(error.message || 'Failed to call generate function')
   }
 
@@ -121,28 +56,61 @@ async function callGenerateAPI(system: string, user: string): Promise<any> {
 }
 
 export async function generateReplies(params: GenerateRepliesParams): Promise<GeneratedReply[]> {
-  const { system, user } = buildPrompt(params)
+  const body: Record<string, unknown> = {
+    contactName: params.contactName,
+    relationshipType: params.relationshipType,
+    relationshipNotes: params.relationshipNotes,
+    conversationHistory: params.conversationHistory,
+    preferredTone: params.preferredTone,
+    theirMessage: params.theirMessage,
+    userGoal: params.userGoal,
+    contextNotes: params.contextNotes,
+    audienceContext: params.audienceContext || 'personal',
+    styleExamples: params.styleExamples || [],
+    mode: params.mode || 'replies',
+  }
+
+  if (params.messageScreenshot) {
+    body.messageScreenshot = params.messageScreenshot
+    body.screenshotMimeType = params.screenshotMimeType || 'image/jpeg'
+  }
+  if (params.contextScreenshots?.length) body.contextScreenshots = params.contextScreenshots
+  if (params.energyRead) body.energyRead = params.energyRead
+  if (params.datingPlatform) body.datingPlatform = params.datingPlatform
+  if (params.datingInterests) body.datingInterests = params.datingInterests
+  if (params.businessProfile) body.businessProfile = params.businessProfile
+  if (params.followUpCount !== undefined) body.followUpCount = params.followUpCount
+  if (params.daysSinceOriginal !== undefined) body.daysSinceOriginal = params.daysSinceOriginal
 
   let lastError: Error | null = null
-
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const data = await callGenerateAPI(system, user)
-      const text = data.content?.[0]?.text || data.text || ''
-
+      const data = await callGenerateAPI(body) as Record<string, unknown>
+      const text = (data.content as Array<{ text: string }>)?.[0]?.text || (data as { text?: string }).text || ''
       return parseResponse(text)
     } catch (err) {
-      if (err instanceof ClaudeAPIError && err.statusCode === 429) {
-        throw err
-      }
+      if (err instanceof ClaudeAPIError && (err.statusCode === 429 || err.statusCode === 402)) throw err
       lastError = err instanceof Error ? err : new Error(String(err))
       if (attempt === 0) continue
     }
   }
-
-  throw new ClaudeAPIError(
-    lastError?.message || 'Failed to generate replies after 2 attempts. Please try again.'
-  )
+  throw new ClaudeAPIError(lastError?.message || 'Failed to generate replies after 2 attempts.')
 }
 
-export { buildPrompt, parseResponse }
+export async function analyzeProfile(screenshot: string, mimeType = 'image/jpeg'): Promise<{
+  interests: string[]
+  job: string | null
+  bio_signals: string[]
+  prompts: string[]
+}> {
+  const data = await callGenerateAPI({ mode: 'profile_analysis', messageScreenshot: screenshot, screenshotMimeType: mimeType }) as Record<string, unknown>
+  const text = (data.content as Array<{ text: string }>)?.[0]?.text || ''
+  try {
+    const cleaned = text.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim()
+    return JSON.parse(cleaned)
+  } catch {
+    return { interests: [], job: null, bio_signals: [], prompts: [] }
+  }
+}
+
+export { parseResponse }
