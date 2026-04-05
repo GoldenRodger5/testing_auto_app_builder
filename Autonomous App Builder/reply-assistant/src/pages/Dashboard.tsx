@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PenLine, MessageSquare, Clock, ArrowRight, CheckCircle2, Bell } from 'lucide-react'
+import { PenLine, MessageSquare, Clock, ArrowRight, CheckCircle2, Bell, Zap } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useConversations } from '@/hooks/useConversations'
 import { Button, Card, Badge, EmptyState, ConversationCardSkeleton } from '@/components/ui'
 import { OutcomeNudgeBadge, OutcomeModal } from '@/components/OutcomeNudge'
+import { PaywallModal } from '@/components/PaywallModal'
 import { getGreeting, timeAgo, truncate, getInitialColor } from '@/lib/utils'
 
 export default function Dashboard() {
@@ -12,6 +13,7 @@ export default function Dashboard() {
   const { profile } = useAuth()
   const { conversations, loading, addOutcomeNotes } = useConversations()
   const [outcomeConvoId, setOutcomeConvoId] = useState<string | null>(null)
+  const [showPaywall, setShowPaywall] = useState(false)
 
   const recent = conversations.slice(0, 10)
 
@@ -49,12 +51,40 @@ export default function Dashboard() {
         <OutcomeModal conversationId={outcomeConvoId} onSave={handleSaveOutcome} />
       )}
 
+      {/* Paywall modal */}
+      <PaywallModal
+        isOpen={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        trigger="limit"
+        repliesUsed={profile?.monthly_reply_count ?? 0}
+      />
+
       {/* Greeting */}
       <div className="space-y-1">
-        <h1 className="font-display text-2xl font-bold">
-          {getGreeting()}, {profile?.display_name || 'there'}
-        </h1>
-        <p className="text-sm text-text-secondary">What do you need to reply to?</p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="font-display text-2xl font-bold">
+              {getGreeting()}, {profile?.display_name || 'there'}
+            </h1>
+            <p className="text-sm text-text-secondary">What do you need to reply to?</p>
+          </div>
+          {/* Free tier usage counter */}
+          {profile?.subscription_tier === 'free' && (
+            <div className="flex flex-col items-end gap-1 shrink-0 mt-1">
+              <span className="text-xs text-text-muted">
+                {profile.monthly_reply_count || 0}/5 replies
+              </span>
+              {(profile.monthly_reply_count || 0) >= 4 && (
+                <button
+                  onClick={() => setShowPaywall(true)}
+                  className="flex items-center gap-1 text-xs text-accent underline hover:no-underline transition-all cursor-pointer"
+                >
+                  <Zap className="w-3 h-3" /> Upgrade
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* New Reply CTA */}
@@ -64,9 +94,12 @@ export default function Dashboard() {
 
       {/* Recent conversations */}
       <div className="space-y-3">
-        <h2 className="font-display text-xs font-semibold text-text-muted uppercase tracking-wider">
-          Recent Conversations
-        </h2>
+        {/* Only show header when conversations exist */}
+        {recent.length > 0 && (
+          <h2 className="font-display text-xs font-semibold text-text-muted uppercase tracking-wider">
+            Recent Conversations
+          </h2>
+        )}
 
         {loading ? (
           <div className="space-y-2">

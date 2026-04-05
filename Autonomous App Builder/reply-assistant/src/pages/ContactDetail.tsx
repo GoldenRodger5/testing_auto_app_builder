@@ -228,9 +228,18 @@ export default function ContactDetail() {
             )}
           </div>
 
-          {/* Upload screenshot zone */}
+          {/* Upload screenshot zone — click or drag-and-drop */}
           <div
             onClick={() => !profileAnalyzing && profileInputRef.current?.click()}
+            onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-accent/50', 'bg-bg-hover') }}
+            onDragEnter={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-accent/50', 'bg-bg-hover') }}
+            onDragLeave={(e) => { e.currentTarget.classList.remove('border-accent/50', 'bg-bg-hover') }}
+            onDrop={(e) => {
+              e.preventDefault()
+              e.currentTarget.classList.remove('border-accent/50', 'bg-bg-hover')
+              const file = e.dataTransfer.files?.[0]
+              if (file && !profileAnalyzing) handleProfileScreenshot(file)
+            }}
             className="rounded-xl border-2 border-dashed border-border p-5 text-center cursor-pointer transition-all hover:border-accent/50 hover:bg-bg-hover select-none"
           >
             <input
@@ -256,7 +265,7 @@ export default function ContactDetail() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-text-primary">Upload their dating profile</p>
-                    <p className="text-xs text-text-muted mt-0.5">Drag a screenshot to extract their interests automatically</p>
+                    <p className="text-xs text-text-muted mt-0.5">Tap or drag a screenshot to extract their interests</p>
                   </div>
                 </>
               )}

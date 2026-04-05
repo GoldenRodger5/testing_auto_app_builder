@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Search, UserPlus, Check, Sparkles, ChevronRight } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp, Search, UserPlus, Check, Sparkles } from 'lucide-react'
 import { useContacts } from '@/hooks/useContacts'
 import { useConversations } from '@/hooks/useConversations'
 import { useAuth } from '@/hooks/useAuth'
@@ -231,7 +231,7 @@ export default function NewReply() {
           >
             <span>{audConf.icon}</span>
             <span className="text-text-secondary">{audConf.label}</span>
-            <ChevronRight className={cn('w-3 h-3 text-text-muted transition-transform', showAudiencePicker && 'rotate-90')} />
+            <ChevronDown className={cn('w-3 h-3 text-text-muted transition-transform', showAudiencePicker && 'rotate-180')} />
           </button>
 
           {showAudiencePicker && (

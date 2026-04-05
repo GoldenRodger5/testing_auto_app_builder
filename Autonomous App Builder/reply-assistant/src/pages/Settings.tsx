@@ -1,15 +1,21 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { User, Mail, Lock, Trash2, LogOut, Mic, Building2, Plus, X, Check } from 'lucide-react'
+import { User, Mail, Lock, Trash2, LogOut, Mic, Building2, Plus, X, Check, Sliders } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { Button, Input, Textarea, Card, Modal } from '@/components/ui'
+import { PaywallModal } from '@/components/PaywallModal'
+import { audienceConfig } from '@/lib/goalChips'
 import type { BusinessProfile } from '@/types'
+import type { AudienceMode } from '@/types'
 import { cn } from '@/lib/utils'
 
 export default function Settings() {
   const navigate = useNavigate()
   const { user, profile, updateProfile, signOut } = useAuth()
+
+  // Paywall
+  const [showPaywall, setShowPaywall] = useState(false)
 
   // Account
   const [displayName, setDisplayName] = useState(profile?.display_name || '')
@@ -41,6 +47,13 @@ export default function Settings() {
     cancellation_policy: '',
     preferred_tone: 'professional' as 'warm' | 'professional' | 'friendly',
   })
+
+  // Fix 3: sync display name when profile loads async
+  useEffect(() => {
+    if (profile?.display_name) {
+      setDisplayName(profile.display_name)
+    }
+  }, [profile?.display_name])
 
   const showBusiness = profile?.primary_audience === 'business' || profile?.primary_audience === 'all'
 
@@ -110,6 +123,13 @@ export default function Settings() {
     setTimeout(() => setStyleSuccess(false), 2000)
   }
 
+  const handleUpdateAudience = async (mode: AudienceMode) => {
+    // Only allow the 4 valid modes — never save 'all'
+    const valid: AudienceMode[] = ['personal', 'freelancer', 'business', 'dating']
+    if (!valid.includes(mode)) return
+    await updateProfile({ primary_audience: mode } as Parameters<typeof updateProfile>[0])
+  }
+
   const handleSaveBusiness = async () => {
     if (!user) return
     setSavingBusiness(true)
@@ -133,7 +153,50 @@ export default function Settings() {
 
   return (
     <div className="p-5 lg:p-8 space-y-8 page-enter">
+      <PaywallModal
+        isOpen={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        trigger="limit"
+        repliesUsed={profile?.monthly_reply_count ?? 0}
+      />
+
       <h1 className="font-display text-xl font-bold">Settings</h1>
+
+      {/* ── Default Reply Mode ────────────────────────────────────────────── */}
+      <div className="space-y-4">
+        <h2 className="font-display text-xs font-semibold text-text-muted uppercase tracking-wider">Default Reply Mode</h2>
+        <Card className="space-y-3">
+          <div className="flex items-center gap-2 text-text-muted">
+            <Sliders className="w-4 h-4" />
+            <span className="text-xs font-medium uppercase tracking-wider">Default Mode</span>
+          </div>
+          <p className="text-xs text-text-secondary leading-relaxed">
+            Sets the default audience mode when you open New Reply. You can always switch modes per reply.
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {(['personal', 'freelancer', 'business', 'dating'] as AudienceMode[]).map((mode) => {
+              const conf = audienceConfig[mode]
+              const isActive = profile?.primary_audience === mode
+              return (
+                <button
+                  key={mode}
+                  onClick={() => handleUpdateAudience(mode)}
+                  className={cn(
+                    'flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border transition-all cursor-pointer btn-press text-left',
+                    isActive
+                      ? 'bg-accent text-white border-accent shadow-glow'
+                      : 'bg-bg-card border-border text-text-secondary hover:border-border-focus hover:bg-bg-hover'
+                  )}
+                >
+                  <span className="text-base">{conf.icon}</span>
+                  <span>{conf.label}</span>
+                  {isActive && <Check className="w-3.5 h-3.5 ml-auto shrink-0" />}
+                </button>
+              )
+            })}
+          </div>
+        </Card>
+      </div>
 
       {/* ── Account ──────────────────────────────────────────────────────── */}
       <div className="space-y-4">
@@ -240,6 +303,18 @@ export default function Settings() {
       {showBusiness && (
         <div className="space-y-4">
           <h2 className="font-display text-xs font-semibold text-text-muted uppercase tracking-wider">Business Profile</h2>
+          {profile?.subscription_tier === 'free' && (
+            <p className="text-xs text-text-secondary leading-relaxed -mt-2">
+              Your business profile is used in Business mode replies.{' '}
+              <button
+                onClick={() => setShowPaywall(true)}
+                className="text-accent underline hover:no-underline cursor-pointer"
+              >
+                Upgrade to Pro
+              </button>{' '}
+              to unlock unlimited business replies.
+            </p>
+          )}
 
           {loadingBusiness ? (
             <div className="py-4 text-center text-sm text-text-muted">Loading...</div>

@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { AuthProvider } from '@/hooks/useAuth'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider, useAuth } from '@/hooks/useAuth'
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 import { AppShell } from '@/components/layout/AppShell'
 import Landing from '@/pages/Landing'
@@ -29,13 +29,33 @@ function LoadingFallback() {
   )
 }
 
+// Redirects logged-in users away from the landing page
+function HomeRoute() {
+  const { user, profile, loading } = useAuth()
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-bg-primary">
+        <Spinner className="w-8 h-8 text-accent" />
+      </div>
+    )
+  }
+  if (user) {
+    // If onboarding explicitly incomplete, send there; otherwise go to dashboard
+    if (profile && profile.onboarding_complete === false) {
+      return <Navigate to="/onboarding" replace />
+    }
+    return <Navigate to="/dashboard" replace />
+  }
+  return <Landing />
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          {/* Public routes */}
-          <Route path="/" element={<Landing />} />
+          {/* Public routes — / redirects logged-in users to dashboard */}
+          <Route path="/" element={<HomeRoute />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
 
