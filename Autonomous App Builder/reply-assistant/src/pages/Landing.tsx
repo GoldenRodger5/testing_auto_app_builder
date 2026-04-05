@@ -1,11 +1,12 @@
 import { useNavigate } from 'react-router-dom'
 import { MessageSquareText, Brain, Sparkles, ArrowRight, Shield, Quote, Camera, Check } from 'lucide-react'
-import { Button } from '@/components/ui'
+import { motion } from 'framer-motion'
+import { Button, ScrollReveal } from '@/components/ui'
 
 const steps = [
   { num: '1', title: 'Screenshot or paste', desc: 'Drop in a screenshot of the message, or paste the text. Either works.' },
-  { num: '2', title: 'Pick your goal', desc: 'Choose what you want to achieve — from audience-specific chips or describe it yourself.' },
-  { num: '3', title: 'Get 3 replies', desc: 'Three different angles, ready to copy and send. Choose the one that fits.' },
+  { num: '2', title: 'Pick your goal', desc: 'Tell us what you want to achieve, or pick from quick suggestions.' },
+  { num: '3', title: 'Get 3 replies', desc: 'Three different replies. Pick one and send.' },
 ]
 
 const audiences = [
@@ -25,7 +26,7 @@ const audiences = [
     accent: 'text-violet-400',
     scenario: 'Chasing a late invoice',
     them: "Hi, just wanted to check in on the project status...",
-    reply: "The project's in great shape! Quick note — invoice #47 was due last Friday. Could you take a look when you get a chance?",
+    reply: "The project's in great shape! Quick note, invoice #47 was due last Friday. Could you take a look when you get a chance?",
   },
   {
     icon: '🏪',
@@ -34,7 +35,7 @@ const audiences = [
     accent: 'text-amber-400',
     scenario: 'Handling a complaint',
     them: "This is completely unacceptable. I want a full refund immediately.",
-    reply: "I'm really sorry to hear this didn't meet your expectations. I've processed your refund — you'll see it in 3-5 business days. We'd love to make this right.",
+    reply: "I'm really sorry to hear this didn't meet your expectations. I've processed your refund and you'll see it in 3-5 business days. We'll make it right.",
   },
   {
     icon: '💕',
@@ -48,7 +49,7 @@ const audiences = [
 ]
 
 const features = [
-  { icon: Brain, title: 'Remembers every contact', desc: 'Builds a relationship profile over time — so replies feel personal, not generic.' },
+  { icon: Brain, title: 'Remembers every contact', desc: 'Builds a relationship profile over time, so replies feel personal, not generic.' },
   { icon: Camera, title: 'Screenshot to reply', desc: 'Take a screenshot of any conversation. Reply Assistant reads it and drafts your response.' },
   { icon: Shield, title: 'Private by design', desc: 'Your conversations are yours. No training on your data. No sharing with third parties.' },
 ]
@@ -61,6 +62,8 @@ const testimonials = [
 
 const FREE_FEATURES = ['5 replies per month', 'All 4 audience modes', 'Basic goal chips', 'Contact history']
 const PAID_FEATURES = ['Unlimited replies', 'Screenshot input', 'Style learning (sounds like you)', 'All goal chips', 'Energy matching', 'Follow-up generation', 'Contact memory']
+
+const ease = [0.25, 0.46, 0.45, 0.94] as const
 
 export default function Landing() {
   const navigate = useNavigate()
@@ -88,83 +91,133 @@ export default function Landing() {
       {/* ─── Hero ────────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[500px] bg-accent/5 rounded-full blur-[140px] pointer-events-none" />
-        <div className="relative max-w-5xl mx-auto px-5 lg:px-8 pt-16 pb-20 lg:pt-24 lg:pb-28 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent-soft border border-accent/15 mb-6">
+        <div className="relative max-w-5xl mx-auto px-5 lg:px-8 pt-16 pb-12 lg:pt-24 lg:pb-16 text-center">
+          {/* Badge pill with ambient glow */}
+          <motion.div
+            animate={{
+              boxShadow: [
+                '0 0 0px rgba(224, 138, 78, 0)',
+                '0 0 12px rgba(224, 138, 78, 0.3)',
+                '0 0 0px rgba(224, 138, 78, 0)',
+              ],
+            }}
+            transition={{
+              duration: 3,
+              repeat: Infinity,
+              ease: 'easeInOut',
+              repeatDelay: 2,
+            }}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent-soft border border-accent/15 mb-6"
+          >
             <Sparkles className="w-3.5 h-3.5 text-accent" />
-            <span className="text-xs font-medium text-accent">AI that remembers who people are to you</span>
-          </div>
+            <span className="text-xs font-medium text-accent">Remembers who people are to you</span>
+          </motion.div>
 
-          <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.1] mb-5 max-w-3xl mx-auto">
+          {/* Headline */}
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease }}
+            className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.1] mb-5 max-w-3xl mx-auto"
+          >
             The reply you're{' '}
-            <span className="text-gradient">stressing about</span>
-            {' '}— drafted in 30 seconds
-          </h1>
+            <motion.span
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+              className="text-gradient"
+            >
+              stressing about
+            </motion.span>
+            {' '}\u2014 drafted in 30 seconds
+          </motion.h1>
 
-          <p className="text-text-secondary text-base sm:text-lg mb-8 max-w-lg mx-auto leading-relaxed">
-            Screenshot or paste any message. Get 3 replies crafted for your relationship, your goal, and your voice — not generic AI output.
-          </p>
+          {/* Subtext */}
+          <motion.p
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+            className="text-text-secondary text-base sm:text-lg mb-8 max-w-lg mx-auto leading-relaxed"
+          >
+            Screenshot or paste any message. Get 3 replies crafted for your relationship, your goal, and your voice.
+          </motion.p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 max-w-sm sm:max-w-none mx-auto">
+          {/* CTAs */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.55 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-3 max-w-sm sm:max-w-none mx-auto"
+          >
             <Button size="lg" className="w-full sm:w-auto shadow-glow btn-press" onClick={() => navigate('/signup')}>
-              Start free — no card needed <ArrowRight className="w-4 h-4 ml-2" />
+              Start free, no card needed <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
             <Button variant="secondary" size="lg" className="w-full sm:w-auto" onClick={() => {
-              document.getElementById('use-cases')?.scrollIntoView({ behavior: 'smooth' })
+              document.getElementById('use-cases')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
             }}>
               See it in action
             </Button>
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* ─── Problem ─────────────────────────────────────────────────────── */}
       <section className="border-y border-border-subtle bg-bg-secondary/50">
-        <div className="max-w-3xl mx-auto px-5 lg:px-8 py-14 lg:py-20 text-center">
-          <p className="text-text-secondary text-lg sm:text-xl leading-relaxed">
-            You've been staring at that message for 20 minutes.
-            You know what you want to say.
-            You just can't get the{' '}
-            <em className="text-text-primary not-italic font-semibold">tone</em> right —
-            firm without being rude, warm without being a pushover, direct without starting a fight.
-          </p>
+        <div className="max-w-3xl mx-auto px-5 lg:px-8 py-14 lg:py-16 text-center">
+          <ScrollReveal>
+            <p className="text-text-secondary text-lg sm:text-xl leading-relaxed">
+              You've been staring at that message for 20 minutes.
+              You know what you want to say.
+              You just can't get the{' '}
+              <em className="text-text-primary not-italic font-semibold">tone</em> right.
+              Firm without being rude. Warm without being a pushover. Direct without starting a fight.
+            </p>
+          </ScrollReveal>
         </div>
       </section>
 
       {/* ─── Use Cases ───────────────────────────────────────────────────── */}
       <section id="use-cases" className="max-w-5xl mx-auto px-5 lg:px-8 py-16 lg:py-24">
-        <div className="text-center mb-12">
-          <p className="text-xs font-medium text-accent uppercase tracking-wider mb-2">For every situation</p>
-          <h2 className="font-display text-2xl lg:text-3xl font-bold">Built for how people actually communicate</h2>
-          <p className="text-text-secondary text-sm mt-2 max-w-lg mx-auto">Four different modes. Each with goal chips, tone calibration, and context tailored to the situation.</p>
-        </div>
+        <ScrollReveal>
+          <div className="text-center mb-12">
+            <p className="text-xs font-medium text-accent uppercase tracking-wider mb-2">For every situation</p>
+            <h2 className="font-display text-2xl lg:text-3xl font-bold">Built for how people actually communicate</h2>
+            <p className="text-text-secondary text-sm mt-2 max-w-lg mx-auto">Each mode has its own reply styles, tuned to the situation.</p>
+          </div>
+        </ScrollReveal>
 
         <div className="grid sm:grid-cols-2 gap-4">
-          {audiences.map(({ icon, label, color, accent, scenario, them, reply }) => (
-            <div key={label} className={`p-5 rounded-xl border ${color} space-y-4`}>
-              <div className="flex items-center gap-2">
-                <span className="text-xl">{icon}</span>
-                <span className={`font-display font-bold text-sm ${accent}`}>{label}</span>
-                <span className="ml-auto text-xs text-text-muted italic">{scenario}</span>
-              </div>
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <div className="w-6 h-6 rounded-full bg-bg-hover flex items-center justify-center shrink-0 mt-0.5">
-                    <span className="text-[10px]">👤</span>
+          {audiences.map(({ icon, label, color, accent, scenario, them, reply }, i) => (
+            <ScrollReveal key={label} delay={i * 0.1}>
+              <motion.div
+                whileHover={{ y: -6, transition: { duration: 0.2, ease: 'easeOut' } }}
+                className={`p-5 rounded-xl border ${color} space-y-4 cursor-default`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">{icon}</span>
+                  <span className={`font-display font-bold text-sm ${accent}`}>{label}</span>
+                  <span className="ml-auto text-xs text-text-muted italic">{scenario}</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <div className="w-6 h-6 rounded-full bg-bg-hover flex items-center justify-center shrink-0 mt-0.5">
+                      <span className="text-[10px]">👤</span>
+                    </div>
+                    <div className="flex-1 px-3 py-2 rounded-xl rounded-tl-sm bg-bg-card border border-border text-xs text-text-secondary leading-relaxed">
+                      {them}
+                    </div>
                   </div>
-                  <div className="flex-1 px-3 py-2 rounded-xl rounded-tl-sm bg-bg-card border border-border text-xs text-text-secondary leading-relaxed">
-                    {them}
+                  <div className="flex gap-2 justify-end">
+                    <div className={`flex-1 px-3 py-2 rounded-xl rounded-tr-sm border text-xs leading-relaxed ${color}`}>
+                      <span className={accent}>{reply}</span>
+                    </div>
+                    <div className="w-6 h-6 rounded-full bg-accent-soft flex items-center justify-center shrink-0 mt-0.5">
+                      <span className="text-[10px]">✨</span>
+                    </div>
                   </div>
                 </div>
-                <div className="flex gap-2 justify-end">
-                  <div className={`flex-1 px-3 py-2 rounded-xl rounded-tr-sm border text-xs leading-relaxed ${color}`}>
-                    <span className={accent}>{reply}</span>
-                  </div>
-                  <div className="w-6 h-6 rounded-full bg-accent-soft flex items-center justify-center shrink-0 mt-0.5">
-                    <span className="text-[10px]">✨</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+              </motion.div>
+            </ScrollReveal>
           ))}
         </div>
       </section>
@@ -172,19 +225,23 @@ export default function Landing() {
       {/* ─── How It Works ────────────────────────────────────────────────── */}
       <section className="border-y border-border-subtle bg-bg-secondary/50">
         <div className="max-w-5xl mx-auto px-5 lg:px-8 py-16 lg:py-24">
-          <div className="text-center mb-12">
-            <p className="text-xs font-medium text-accent uppercase tracking-wider mb-2">How it works</p>
-            <h2 className="font-display text-2xl lg:text-3xl font-bold">Three steps. Thirty seconds.</h2>
-          </div>
+          <ScrollReveal>
+            <div className="text-center mb-12">
+              <p className="text-xs font-medium text-accent uppercase tracking-wider mb-2">How it works</p>
+              <h2 className="font-display text-2xl lg:text-3xl font-bold">Three steps. Thirty seconds.</h2>
+            </div>
+          </ScrollReveal>
           <div className="grid sm:grid-cols-3 gap-8">
-            {steps.map(({ num, title, desc }) => (
-              <div key={num} className="text-center sm:text-left">
-                <div className="w-10 h-10 rounded-xl bg-accent-soft flex items-center justify-center mb-4 mx-auto sm:mx-0">
-                  <span className="font-display font-bold text-accent text-sm">{num}</span>
+            {steps.map(({ num, title, desc }, i) => (
+              <ScrollReveal key={num} delay={i * 0.1}>
+                <div className="text-center sm:text-left">
+                  <div className="w-10 h-10 rounded-xl bg-accent-soft flex items-center justify-center mb-4 mx-auto sm:mx-0">
+                    <span className="font-display font-bold text-accent text-sm">{num}</span>
+                  </div>
+                  <h3 className="font-display font-semibold text-base mb-1.5">{title}</h3>
+                  <p className="text-sm text-text-secondary leading-relaxed">{desc}</p>
                 </div>
-                <h3 className="font-display font-semibold text-base mb-1.5">{title}</h3>
-                <p className="text-sm text-text-secondary leading-relaxed">{desc}</p>
-              </div>
+              </ScrollReveal>
             ))}
           </div>
         </div>
@@ -192,26 +249,30 @@ export default function Landing() {
 
       {/* ─── Memory Advantage ────────────────────────────────────────────── */}
       <section className="max-w-5xl mx-auto px-5 lg:px-8 py-16 lg:py-24">
-        <div className="max-w-3xl mx-auto text-center mb-12">
-          <div className="w-12 h-12 rounded-xl bg-accent-soft flex items-center justify-center mx-auto mb-5">
-            <Brain className="w-6 h-6 text-accent" />
-          </div>
-          <h2 className="font-display text-2xl lg:text-3xl font-bold mb-4">
-            Unlike ChatGPT, it remembers your history with every person
-          </h2>
-          <p className="text-text-secondary text-base leading-relaxed max-w-xl mx-auto">
-            Every reply you send teaches Reply Assistant about the relationship. It learns your tone, adapts to each person, and gets more accurate over time.
-          </p>
-        </div>
-        <div className="grid sm:grid-cols-3 gap-5">
-          {features.map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="p-5 rounded-xl bg-bg-card border border-border">
-              <div className="w-9 h-9 rounded-lg bg-accent-soft flex items-center justify-center mb-3">
-                <Icon className="w-4 h-4 text-accent" />
-              </div>
-              <h3 className="font-display font-semibold text-sm mb-1.5">{title}</h3>
-              <p className="text-xs text-text-secondary leading-relaxed">{desc}</p>
+        <ScrollReveal>
+          <div className="max-w-3xl mx-auto text-center mb-12">
+            <div className="w-12 h-12 rounded-xl bg-accent-soft flex items-center justify-center mx-auto mb-5">
+              <Brain className="w-6 h-6 text-accent" />
             </div>
+            <h2 className="font-display text-2xl lg:text-3xl font-bold mb-4">
+              Unlike ChatGPT, it remembers your history with every person
+            </h2>
+            <p className="text-text-secondary text-base leading-relaxed max-w-xl mx-auto">
+              Every reply you send teaches Reply Assistant about the relationship. It learns your tone, adapts to each person, and gets more accurate over time.
+            </p>
+          </div>
+        </ScrollReveal>
+        <div className="grid sm:grid-cols-3 gap-5">
+          {features.map(({ icon: Icon, title, desc }, i) => (
+            <ScrollReveal key={title} delay={i * 0.1}>
+              <div className="p-5 rounded-xl bg-bg-card border border-border">
+                <div className="w-9 h-9 rounded-lg bg-accent-soft flex items-center justify-center mb-3">
+                  <Icon className="w-4 h-4 text-accent" />
+                </div>
+                <h3 className="font-display font-semibold text-sm mb-1.5">{title}</h3>
+                <p className="text-xs text-text-secondary leading-relaxed">{desc}</p>
+              </div>
+            </ScrollReveal>
           ))}
         </div>
       </section>
@@ -219,20 +280,24 @@ export default function Landing() {
       {/* ─── Social Proof ────────────────────────────────────────────────── */}
       <section className="border-y border-border-subtle bg-bg-secondary/50">
         <div className="max-w-5xl mx-auto px-5 lg:px-8 py-16 lg:py-24">
-          <div className="text-center mb-10">
-            <p className="text-xs font-medium text-accent uppercase tracking-wider mb-2">What people say</p>
-            <h2 className="font-display text-2xl lg:text-3xl font-bold">People love Reply Assistant</h2>
-          </div>
+          <ScrollReveal>
+            <div className="text-center mb-10">
+              <p className="text-xs font-medium text-accent uppercase tracking-wider mb-2">What people say</p>
+              <h2 className="font-display text-2xl lg:text-3xl font-bold">Real feedback, real people</h2>
+            </div>
+          </ScrollReveal>
           <div className="grid sm:grid-cols-3 gap-5">
-            {testimonials.map(({ name, role, quote }) => (
-              <div key={name} className="p-5 rounded-xl bg-bg-card border border-border space-y-4">
-                <Quote className="w-5 h-5 text-accent/40" />
-                <p className="text-sm text-text-secondary leading-relaxed">"{quote}"</p>
-                <div>
-                  <p className="text-sm font-medium">{name}</p>
-                  <p className="text-xs text-text-muted">{role}</p>
+            {testimonials.map(({ name, role, quote }, i) => (
+              <ScrollReveal key={name} delay={i * 0.15}>
+                <div className="p-5 rounded-xl bg-bg-card border border-border space-y-4">
+                  <Quote className="w-5 h-5 text-accent/40" />
+                  <p className="text-sm text-text-secondary leading-relaxed">"{quote}"</p>
+                  <div>
+                    <p className="text-sm font-medium">{name}</p>
+                    <p className="text-xs text-text-muted">{role}</p>
+                  </div>
                 </div>
-              </div>
+              </ScrollReveal>
             ))}
           </div>
         </div>
@@ -240,87 +305,110 @@ export default function Landing() {
 
       {/* ─── Pricing ─────────────────────────────────────────────────────── */}
       <section className="max-w-5xl mx-auto px-5 lg:px-8 py-16 lg:py-24">
-        <div className="text-center mb-12">
-          <p className="text-xs font-medium text-accent uppercase tracking-wider mb-2">Pricing</p>
-          <h2 className="font-display text-2xl lg:text-3xl font-bold">Start free. Upgrade when you're hooked.</h2>
-        </div>
+        <ScrollReveal>
+          <div className="text-center mb-12">
+            <p className="text-xs font-medium text-accent uppercase tracking-wider mb-2">Pricing</p>
+            <h2 className="font-display text-2xl lg:text-3xl font-bold">Start free. Upgrade when you're hooked.</h2>
+          </div>
+        </ScrollReveal>
 
         <div className="grid sm:grid-cols-3 gap-5 max-w-3xl mx-auto">
           {/* Free */}
-          <div className="p-6 rounded-xl bg-bg-card border border-border space-y-4">
-            <div>
-              <h3 className="font-display font-bold text-base">Free</h3>
-              <p className="text-2xl font-bold mt-1">$0<span className="text-sm text-text-muted font-normal">/mo</span></p>
-            </div>
-            <ul className="space-y-2">
-              {FREE_FEATURES.map(f => (
-                <li key={f} className="flex items-center gap-2 text-xs text-text-secondary">
-                  <Check className="w-3.5 h-3.5 text-success shrink-0" /> {f}
-                </li>
-              ))}
-            </ul>
-            <Button variant="secondary" size="sm" className="w-full btn-press" onClick={() => navigate('/signup')}>
-              Get started
-            </Button>
-          </div>
+          <ScrollReveal delay={0}>
+            <motion.div
+              whileHover={{ y: -4, transition: { duration: 0.2 } }}
+              className="p-6 rounded-xl bg-bg-card border border-border space-y-4"
+            >
+              <div>
+                <h3 className="font-display font-bold text-base">Free</h3>
+                <p className="text-2xl font-bold mt-1">$0<span className="text-sm text-text-muted font-normal">/mo</span></p>
+              </div>
+              <ul className="space-y-2">
+                {FREE_FEATURES.map(f => (
+                  <li key={f} className="flex items-center gap-2 text-xs text-text-secondary">
+                    <Check className="w-3.5 h-3.5 text-success shrink-0" /> {f}
+                  </li>
+                ))}
+              </ul>
+              <Button variant="secondary" size="sm" className="w-full btn-press" onClick={() => navigate('/signup')}>
+                Get started
+              </Button>
+            </motion.div>
+          </ScrollReveal>
 
           {/* Annual — highlighted */}
-          <div className="p-6 rounded-xl bg-accent-soft border border-accent/30 space-y-4 relative">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-accent text-white text-[10px] font-bold">
-              BEST VALUE
-            </div>
-            <div>
-              <h3 className="font-display font-bold text-base text-accent">Annual</h3>
-              <p className="text-2xl font-bold mt-1">$34.99<span className="text-sm text-text-muted font-normal">/yr</span></p>
-              <p className="text-xs text-accent mt-0.5">Save 42% vs monthly</p>
-            </div>
-            <ul className="space-y-2">
-              {PAID_FEATURES.map(f => (
-                <li key={f} className="flex items-center gap-2 text-xs text-text-secondary">
-                  <Check className="w-3.5 h-3.5 text-accent shrink-0" /> {f}
-                </li>
-              ))}
-            </ul>
-            <Button size="sm" className="w-full btn-press shadow-glow" onClick={() => navigate('/signup')}>
-              Get annual
-            </Button>
-          </div>
+          <ScrollReveal delay={0.1}>
+            <motion.div
+              whileHover={{
+                y: -6,
+                boxShadow: '0 20px 60px rgba(224, 138, 78, 0.15)',
+                transition: { duration: 0.2 },
+              }}
+              className="p-6 rounded-xl bg-accent-soft border border-accent/30 space-y-4 relative"
+            >
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-accent text-white text-[10px] font-bold">
+                BEST VALUE
+              </div>
+              <div>
+                <h3 className="font-display font-bold text-base text-accent">Annual</h3>
+                <p className="text-2xl font-bold mt-1">$34.99<span className="text-sm text-text-muted font-normal">/yr</span></p>
+                <p className="text-xs text-accent mt-0.5">Save 42% vs monthly</p>
+              </div>
+              <ul className="space-y-2">
+                {PAID_FEATURES.map(f => (
+                  <li key={f} className="flex items-center gap-2 text-xs text-text-secondary">
+                    <Check className="w-3.5 h-3.5 text-accent shrink-0" /> {f}
+                  </li>
+                ))}
+              </ul>
+              <Button size="sm" className="w-full btn-press shadow-glow" onClick={() => navigate('/signup')}>
+                Get annual
+              </Button>
+            </motion.div>
+          </ScrollReveal>
 
           {/* Monthly + One-time */}
-          <div className="p-6 rounded-xl bg-bg-card border border-border space-y-4">
-            <div>
-              <h3 className="font-display font-bold text-base">Monthly</h3>
-              <p className="text-2xl font-bold mt-1">$4.99<span className="text-sm text-text-muted font-normal">/mo</span></p>
-            </div>
-            <ul className="space-y-2">
-              {PAID_FEATURES.map(f => (
-                <li key={f} className="flex items-center gap-2 text-xs text-text-secondary">
-                  <Check className="w-3.5 h-3.5 text-success shrink-0" /> {f}
-                </li>
-              ))}
-            </ul>
-            <Button variant="secondary" size="sm" className="w-full btn-press" onClick={() => navigate('/signup')}>
-              Get monthly
-            </Button>
-            <p className="text-center text-xs text-accent cursor-pointer hover:text-accent/80" onClick={() => navigate('/signup')}>
-              Or buy once for $19.99 →
-            </p>
-          </div>
+          <ScrollReveal delay={0.2}>
+            <motion.div
+              whileHover={{ y: -4, transition: { duration: 0.2 } }}
+              className="p-6 rounded-xl bg-bg-card border border-border space-y-4"
+            >
+              <div>
+                <h3 className="font-display font-bold text-base">Monthly</h3>
+                <p className="text-2xl font-bold mt-1">$4.99<span className="text-sm text-text-muted font-normal">/mo</span></p>
+              </div>
+              <ul className="space-y-2">
+                {PAID_FEATURES.map(f => (
+                  <li key={f} className="flex items-center gap-2 text-xs text-text-secondary">
+                    <Check className="w-3.5 h-3.5 text-success shrink-0" /> {f}
+                  </li>
+                ))}
+              </ul>
+              <Button variant="secondary" size="sm" className="w-full btn-press" onClick={() => navigate('/signup')}>
+                Get monthly
+              </Button>
+              <p className="text-center text-xs text-accent cursor-pointer hover:text-accent/80" onClick={() => navigate('/signup')}>
+                Or buy once for $19.99 →
+              </p>
+            </motion.div>
+          </ScrollReveal>
         </div>
       </section>
 
       {/* ─── Final CTA ───────────────────────────────────────────────────── */}
       <section className="border-t border-border-subtle bg-bg-secondary/50">
         <div className="max-w-3xl mx-auto px-5 lg:px-8 py-16 lg:py-24 text-center">
-          <h2 className="font-display text-2xl lg:text-3xl font-bold mb-4">
-            Ready to stop overthinking every reply?
-          </h2>
-          <p className="text-text-secondary text-base mb-8 max-w-md mx-auto">
-            Free to start. No credit card required. Your first reply is 30 seconds away.
-          </p>
-          <Button size="lg" onClick={() => navigate('/signup')} className="shadow-glow btn-press">
-            Get started for free <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
+          <ScrollReveal>
+            <h2 className="font-display text-2xl lg:text-3xl font-bold mb-4">
+              Ready to stop overthinking every reply?
+            </h2>
+            <p className="text-text-secondary text-base mb-8 max-w-md mx-auto">
+              Free to start. No credit card required. Your first reply is 30 seconds away.
+            </p>
+            <Button size="lg" onClick={() => navigate('/signup')} className="shadow-glow btn-press">
+              Get started for free <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </ScrollReveal>
         </div>
       </section>
 
